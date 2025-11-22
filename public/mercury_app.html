@@ -1,0 +1,798 @@
+<!--
+SETUP INSTRUCTIONS:
+1. Get free API key from: https://financialmodelingprep.com
+2. Sign up for free account (250 API calls/day)
+3. Copy your API key
+4. Open this file in a text editor
+5. Find the line: const FMP_API_KEY = 'YOUR_API_KEY_HERE';
+6. Replace 'YOUR_API_KEY_HERE' with your actual API key
+7. Save the file
+8. Double-click to open in browser
+9. Start analyzing stocks!
+
+For Gemini API key:
+1. Go to: https://aistudio.google.com/app/apikey
+2. Create API key
+3. Find: const GEMINI_API_KEY = 'YOUR_GEMINI_KEY_HERE';
+4. Replace with your Gemini API key
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercury | AI Stock Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        mercury: {
+                            blue: '#1E40AF',
+                            dark: '#0F172A',
+                            green: '#10B981',
+                        }
+                    },
+                    animation: {
+                        'spin-slow': 'spin 3s linear infinite',
+                        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F8FAFC;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card-shadow {
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Markdown Styles */
+        .prose h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: #1E293B;
+        }
+
+        .prose p {
+            margin-bottom: 0.75rem;
+            line-height: 1.6;
+            color: #475569;
+        }
+
+        .prose ul {
+            list-style-type: disc;
+            padding-left: 1.25rem;
+            margin-bottom: 1rem;
+            color: #475569;
+        }
+
+        .prose li {
+            margin-bottom: 0.25rem;
+        }
+
+        .prose strong {
+            color: #0F172A;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body class="text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="bg-mercury-blue p-1.5 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                        <polyline points="17 6 23 6 23 12"></polyline>
+                    </svg>
+                </div>
+                <span class="text-xl font-bold text-slate-900 tracking-tight">Mercury</span>
+            </div>
+            <button onclick="toggleSettings()" class="text-slate-400 hover:text-mercury-blue transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal"
+        class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <h3 class="text-xl font-bold mb-4">API Settings</h3>
+            <p class="text-sm text-slate-500 mb-6">Enter your API keys to enable live data and AI analysis.</p>
+
+            <div class="space-y-4">
+                <!-- FMP API Key -->
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">FMP API Key (Stock Data)</label>
+                    <div class="flex gap-2">
+                        <input type="password" id="fmpKeyInput"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            placeholder="Enter FMP API Key">
+                        <button onclick="validateFMPKey()"
+                            class="bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-2 px-4 rounded text-sm transition-colors">Test
+                            Key</button>
+                    </div>
+                    <div id="fmpStatus" class="text-xs text-gray-500 mt-1"></div>
+                </div>
+
+                <!-- Claude API Key -->
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Claude API Key (AI Analysis)</label>
+                    <input type="password" id="claudeKeyInput"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        placeholder="Enter Claude API Key (sk-...)">
+                    <p class="text-xs text-gray-500 mt-1">Get API key at <a href="https://console.anthropic.com/"
+                            target="_blank" class="text-blue-500 hover:underline">console.anthropic.com</a> (Starts with
+                        $5 free credit)</p>
+                </div>
+            </div>
+
+            <div class="mt-8 flex justify-end space-x-3">
+                <button onclick="toggleSettings()"
+                    class="px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg">Cancel</button>
+                <button onclick="saveSettings()"
+                    class="px-6 py-2 bg-mercury-blue text-white rounded-lg font-medium hover:bg-blue-800">Save
+                    Keys</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-grow flex flex-col items-center justify-start pt-12 px-4 sm:px-6 pb-20">
+
+        <!-- Search Section -->
+        <div id="searchSection"
+            class="w-full max-w-2xl transition-all duration-500 ease-in-out transform translate-y-0">
+            <div class="text-center mb-10">
+                <h1 class="text-4xl md:text-5xl font-bold text-slate-900 mb-4 tracking-tight">
+                    Invest Smarter with <span class="gradient-text">AI</span>
+                </h1>
+                <p class="text-lg text-slate-500">Enter a ticker symbol to get instant, plain-English analysis.</p>
+            </div>
+
+            <div class="relative group">
+                <div
+                    class="absolute -inset-1 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-500">
+                </div>
+                <div class="relative bg-white rounded-xl shadow-xl flex items-center p-2 border border-slate-100">
+                    <div class="pl-4 text-slate-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.3-4.3"></path>
+                        </svg>
+                    </div>
+                    <input type="text" id="tickerInput" placeholder="Search ticker (e.g. AAPL, TSLA, IBM)"
+                        class="w-full bg-transparent border-none focus:ring-0 text-lg font-medium text-slate-900 px-4 py-3 placeholder-slate-300"
+                        onkeypress="handleKeyPress(event)">
+                    <button onclick="analyzeStock()"
+                        class="bg-mercury-blue text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/20">
+                        Analyze
+                    </button>
+                </div>
+            </div>
+
+            <!-- Suggestions -->
+            <div class="mt-4 flex flex-wrap justify-center gap-2 text-sm text-slate-500">
+                <span>Try:</span>
+                <button onclick="setTicker('IBM')" class="hover:text-mercury-blue hover:underline">IBM</button>
+                <button onclick="setTicker('AAPL')" class="hover:text-mercury-blue hover:underline">AAPL</button>
+                <button onclick="setTicker('GOOGL')" class="hover:text-mercury-blue hover:underline">GOOGL</button>
+                <button onclick="setTicker('MSFT')" class="hover:text-mercury-blue hover:underline">MSFT</button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden mt-16 text-center">
+            <div class="relative w-24 h-24 mx-auto mb-6">
+                <div class="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
+                <div
+                    class="absolute inset-0 border-4 border-mercury-blue rounded-full border-t-transparent animate-spin">
+                </div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-mercury-blue animate-pulse"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                        <path d="M3 3v5h5"></path>
+                        <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+                        <path d="M16 16h5v5"></path>
+                    </svg>
+                </div>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 mb-2">Analyzing Market Data...</h3>
+            <p class="text-slate-500 animate-pulse" id="loadingText">Fetching real-time prices</p>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage"
+            class="hidden mt-8 w-full max-w-md bg-red-50 border border-red-100 rounded-xl p-4 flex items-start space-x-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500 shrink-0" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+                <h4 class="font-bold text-red-800">Analysis Failed</h4>
+                <p class="text-sm text-red-600 mt-1" id="errorText">Could not fetch data.</p>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden w-full max-w-5xl mt-12 animate-fade-in-up">
+
+            <!-- Header Info -->
+            <div
+                class="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center">
+                <div>
+                    <div class="flex items-center space-x-3 mb-2">
+                        <h2 id="stockName" class="text-3xl md:text-4xl font-bold text-slate-900">Apple Inc.</h2>
+                        <span id="stockTicker"
+                            class="px-3 py-1 bg-slate-100 text-slate-600 text-sm font-bold rounded-full">AAPL</span>
+                    </div>
+                    <p class="text-slate-500 text-sm">Real-time Data • <span id="marketStatus">Market Open</span></p>
+                </div>
+                <div class="mt-6 md:mt-0 text-right">
+                    <div id="stockPrice" class="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight">$182.63
+                    </div>
+                    <div id="stockChange" class="flex items-center justify-end text-lg font-bold mt-1 text-emerald-500">
+                        +1.25% (+$2.45)
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                <!-- AI Analysis Card -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white rounded-2xl p-8 shadow-lg border border-slate-100 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-emerald-500">
+                        </div>
+
+                        <div class="flex items-center space-x-3 mb-6">
+                            <div class="bg-blue-50 p-2 rounded-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-mercury-blue"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                                    <path d="M3 3v5h5"></path>
+                                    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+                                    <path d="M16 16h5v5"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-xl font-bold text-slate-900">Mercury AI Analysis</h3>
+                        </div>
+
+                        <div id="aiContent" class="prose max-w-none">
+                            <!-- AI Content will be injected here -->
+                            <div class="animate-pulse space-y-4">
+                                <div class="h-4 bg-slate-100 rounded w-3/4"></div>
+                                <div class="h-4 bg-slate-100 rounded w-full"></div>
+                                <div class="h-4 bg-slate-100 rounded w-5/6"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Key Metrics Sidebar -->
+                <div class="space-y-6">
+                    <!-- Recommendation Card -->
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">AI Recommendation
+                        </h4>
+                        <div id="recommendationBadge"
+                            class="inline-flex items-center px-4 py-2 rounded-lg bg-emerald-100 text-emerald-800 font-bold text-lg">
+                            <span class="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
+                            BUY
+                        </div>
+                        <p class="text-sm text-slate-500 mt-3 leading-relaxed">
+                            Based on technical indicators and market sentiment analysis.
+                        </p>
+                    </div>
+
+                    <!-- Stats Grid -->
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Key Metrics</h4>
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center py-2 border-b border-slate-50">
+                                <span class="text-slate-500 text-sm">Volume</span>
+                                <span id="metricVolume" class="font-semibold text-slate-900">--</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-slate-50">
+                                <span class="text-slate-500 text-sm">High (Day)</span>
+                                <span id="metricHigh" class="font-semibold text-slate-900">--</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-slate-50">
+                                <span class="text-slate-500 text-sm">Low (Day)</span>
+                                <span id="metricLow" class="font-semibold text-slate-900">--</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2">
+                                <span class="text-slate-500 text-sm">Prev Close</span>
+                                <span id="metricPrev" class="font-semibold text-slate-900">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="resetSearch()"
+                        class="w-full py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-bold hover:border-mercury-blue hover:text-mercury-blue transition-colors">
+                        Analyze Another Stock
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // ==========================================
+        // CONFIGURATION
+        // ==========================================
+
+        // Financial Modeling Prep API
+        // Get free key: https://financialmodelingprep.com
+        let FMP_API_KEY = 'YOUR_API_KEY_HERE'; // ADD YOUR FMP API KEY HERE
+
+        // Claude API
+        // Get key: https://console.anthropic.com/
+        let CLAUDE_API_KEY = '';
+        const CLAUDE_MODEL = 'claude-sonnet-4-20250514'; // Fixed model
+
+        // ==========================================
+
+        // Load keys from local storage if available
+        if (localStorage.getItem('mercury_fmp_key')) FMP_API_KEY = localStorage.getItem('mercury_fmp_key');
+        if (localStorage.getItem('mercury_claude_key')) CLAUDE_API_KEY = localStorage.getItem('mercury_claude_key');
+
+        // UI Elements
+
+        // UI Elements
+        const searchSection = document.getElementById('searchSection');
+        const loadingState = document.getElementById('loadingState');
+        const resultsSection = document.getElementById('resultsSection');
+        const errorMessage = document.getElementById('errorMessage');
+        const tickerInput = document.getElementById('tickerInput');
+
+        function setTicker(ticker) {
+            tickerInput.value = ticker;
+            analyzeStock();
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') analyzeStock();
+        }
+
+        function toggleSettings() {
+            const modal = document.getElementById('settingsModal');
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                document.getElementById('fmpKeyInput').value = (FMP_API_KEY !== 'YOUR_API_KEY_HERE') ? FMP_API_KEY : '';
+                document.getElementById('geminiKeyInput').value = GEMINI_API_KEY;
+                loadModels();
+            }
+        }
+
+        // Global Helper for robust fetching
+        async function fetchWithFallback(url) {
+            const PROXIES = [
+                'https://corsproxy.io/?',
+                'https://api.allorigins.win/raw?url='
+            ];
+
+            // 1. Try Direct First
+            try {
+                const res = await fetch(url);
+                if (res.ok) return await res.json();
+
+                if (res.status === 403) {
+                    const text = await res.text();
+                    try {
+                        const jsonError = JSON.parse(text);
+                        if (jsonError["Error Message"]) throw new Error(jsonError["Error Message"]);
+                    } catch (e) { }
+                    if (text.includes("Invalid API KEY")) throw new Error("Invalid FMP API Key.");
+                    if (text.includes("Limit Reach")) throw new Error("Daily API limit reached.");
+                    throw new Error(`FMP Error (403): ${text.substring(0, 100)}`);
+                }
+                if (res.status === 429) throw new Error("Daily API limit reached (250 calls/day).");
+            } catch (e) {
+                if (e.message.includes("FMP Error") || e.message.includes("Daily") || e.message.includes("Invalid")) throw e;
+                console.warn("Direct fetch failed, trying proxies...", e);
+            }
+
+            // 2. Try Proxies
+            for (const proxy of PROXIES) {
+                try {
+                    console.log(`Trying proxy: ${proxy}`);
+                    let fetchUrl = proxy.endsWith('=') ? proxy + encodeURIComponent(url) : proxy + encodeURIComponent(url);
+
+                    const res = await fetch(fetchUrl);
+                    if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
+                    return await res.json();
+                } catch (e) {
+                    console.warn(`Proxy ${proxy} failed:`, e);
+                }
+            }
+            throw new Error("All fetch attempts failed. Please check your connection or API key.");
+        }
+
+        function saveSettings() {
+            const fmp = document.getElementById('fmpKeyInput').value.trim();
+            const claude = document.getElementById('claudeKeyInput').value.trim();
+
+            if (fmp) {
+                FMP_API_KEY = fmp;
+                localStorage.setItem('mercury_fmp_key', fmp);
+            }
+            if (claude) {
+                CLAUDE_API_KEY = claude;
+                localStorage.setItem('mercury_claude_key', claude);
+            }
+            toggleSettings();
+        }
+
+        async function validateFMPKey() {
+            const key = document.getElementById('fmpKeyInput').value.trim() || FMP_API_KEY;
+            const status = document.getElementById('fmpStatus');
+
+            if (!key) {
+                status.textContent = "Error: Please enter an API Key first.";
+                status.className = "text-xs text-red-500 mt-1";
+                return;
+            }
+
+            status.textContent = "Testing key...";
+            status.className = "text-xs text-blue-500 mt-1 animate-pulse";
+
+            try {
+                const testUrl = `https://financialmodelingprep.com/stable/profile?symbol=AAPL&apikey=${key}`;
+                const data = await fetchWithFallback(testUrl);
+
+                if (data && data.length > 0) {
+                    status.textContent = "Success! Key is valid.";
+                    status.className = "text-xs text-emerald-500 mt-1";
+                } else {
+                    throw new Error("Key seems valid but returned no data.");
+                }
+            } catch (e) {
+                console.error(e);
+                status.textContent = `Failed: ${e.message}`;
+                status.className = "text-xs text-red-500 mt-1";
+            }
+        }
+
+        function resetSearch() {
+            resultsSection.classList.add('hidden');
+            searchSection.classList.remove('hidden');
+            searchSection.classList.remove('-translate-y-8');
+            tickerInput.value = '';
+            errorMessage.classList.add('hidden');
+        }
+
+        function getCurrencySymbol(ticker) {
+            if (!ticker) return '$';
+            const t = ticker.toUpperCase();
+            if (t.includes('.NS') || t.includes('.BO')) return '₹';
+            if (t.includes('.L')) return '£';
+            if (t.includes('.PA') || t.includes('.DE') || t.includes('.AS')) return '€';
+            return '$';
+        }
+
+        async function analyzeStock() {
+            const ticker = tickerInput.value.toUpperCase().trim();
+            if (!ticker) return;
+
+            // UI Updates
+            searchSection.classList.add('-translate-y-8');
+            setTimeout(() => searchSection.classList.add('hidden'), 300);
+            loadingState.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+            resultsSection.classList.add('hidden');
+
+            try {
+                // 1. Fetch Stock Data
+                document.getElementById('loadingText').textContent = `Fetching market data for ${ticker}...`;
+                const stockData = await fetchStockData(ticker);
+
+                // 2. Update UI with Stock Data
+                updateStockUI(stockData);
+
+                // 3. Fetch AI Analysis
+                if (CLAUDE_API_KEY) {
+                    document.getElementById('loadingText').textContent = `Generating analysis with Claude AI...`;
+                    try {
+                        const analysis = await fetchAIAnalysis(stockData);
+                        renderAIAnalysis(analysis);
+                    } catch (aiError) {
+                        console.error("AI Error:", aiError);
+                        renderAIAnalysis(`**AI Analysis Unavailable:** ${aiError.message}.<br>Please check your Claude API key in settings.`);
+                    }
+                } else {
+                    renderAIAnalysis("Please enter a Claude API key in settings to see AI analysis.");
+                }
+
+                // 4. Show Results
+                loadingState.classList.add('hidden');
+                resultsSection.classList.remove('hidden');
+
+            } catch (error) {
+                console.error(error);
+                loadingState.classList.add('hidden');
+                searchSection.classList.remove('hidden');
+                searchSection.classList.remove('-translate-y-8');
+                errorMessage.classList.remove('hidden');
+
+                let errorMsg = error.message;
+                if (errorMsg === 'Failed to fetch') {
+                    errorMsg = "Network Error: Could not connect to stock data provider. Please check your internet connection.";
+                }
+
+                document.getElementById('errorText').innerHTML = `<strong>Data Fetch Error:</strong> ${errorMsg}`;
+            }
+        }
+
+        async function fetchStockData(ticker) {
+            if (!FMP_API_KEY || FMP_API_KEY === 'YOUR_API_KEY_HERE') {
+                throw new Error("Please add your FMP API key in Settings to use Mercury.");
+            }
+
+            // 1. Fetch Quote (Stable Endpoint)
+            const quoteUrl = `https://financialmodelingprep.com/stable/quote?symbol=${ticker}&apikey=${FMP_API_KEY}`;
+            let quoteData = [];
+            try {
+                quoteData = await fetchWithFallback(quoteUrl);
+            } catch (e) {
+                console.warn("Quote fetch failed, trying profile only...", e);
+            }
+
+            // 2. Fetch Profile (Stable Endpoint)
+            const profileUrl = `https://financialmodelingprep.com/stable/profile?symbol=${ticker}&apikey=${FMP_API_KEY}`;
+            let profileData = [];
+            try {
+                profileData = await fetchWithFallback(profileUrl);
+            } catch (e) {
+                console.warn("Profile fetch failed", e);
+            }
+
+            // Check if we found ANYTHING
+            if ((!quoteData || quoteData.length === 0) && (!profileData || profileData.length === 0)) {
+                throw new Error("Stock symbol not found. Please check the ticker and try again.");
+            }
+
+            const quote = (quoteData && quoteData.length > 0) ? quoteData[0] : {};
+            const profile = (profileData && profileData.length > 0) ? profileData[0] : {};
+
+            // If we have profile but no quote (common for some international stocks on free plan),
+            // construct a partial quote from profile data.
+            if (!quote.symbol && profile.symbol) {
+                quote.symbol = profile.symbol;
+                quote.name = profile.companyName;
+                quote.price = profile.price;
+                quote.change = profile.changes;
+                quote.changesPercentage = 0; // Calc below
+                quote.marketCap = profile.mktCap;
+                quote.volume = profile.volAvg;
+            }
+
+            // Calculate % change if missing
+            if (quote.price && quote.change && !quote.changesPercentage) {
+                const prevPrice = quote.price - quote.change;
+                if (prevPrice !== 0) {
+                    quote.changesPercentage = ((quote.change / prevPrice) * 100);
+                }
+            }
+
+            return {
+                quote: quote,
+                profile: profile
+            };
+        }
+
+        function updateStockUI(data) {
+            const quote = data.quote;
+            const profile = data.profile;
+
+            const name = quote.name || quote.symbol;
+            const ticker = quote.symbol;
+            const currency = getCurrencySymbol(ticker);
+
+            // Safe access with defaults
+            const price = (typeof quote.price === 'number') ? quote.price : 0;
+            const change = (typeof quote.change === 'number') ? quote.change : 0;
+            const changePercent = (typeof quote.changesPercentage === 'number') ? quote.changesPercentage : 0;
+
+            const volume = quote.volume ? quote.volume.toLocaleString() : null;
+            const high = quote.dayHigh;
+            const low = quote.dayLow;
+
+            // Safe prev calculation
+            let prev = quote.previousClose;
+            if (!prev && price && change) {
+                prev = price - change;
+            }
+
+            const marketStatus = volume ? "Real-time Data" : "Market Closed / Data Delayed";
+
+            document.getElementById('stockName').textContent = name;
+            document.getElementById('stockTicker').textContent = ticker;
+            document.getElementById('stockPrice').textContent = `${currency}${price.toFixed(2)}`;
+            document.getElementById('marketStatus').textContent = marketStatus;
+
+            const changeEl = document.getElementById('stockChange');
+            if (change >= 0) {
+                changeEl.className = "flex items-center justify-end text-lg font-bold mt-1 text-emerald-500";
+                changeEl.textContent = `+${currency}${change.toFixed(2)} (+${changePercent.toFixed(2)}%)`;
+            } else {
+                changeEl.className = "flex items-center justify-end text-lg font-bold mt-1 text-red-500";
+                changeEl.textContent = `${currency}${Math.abs(change).toFixed(2)} (${changePercent.toFixed(2)}%)`;
+            }
+
+            document.getElementById('metricVolume').textContent = volume || "Market Closed";
+
+            // Helper for safe number formatting
+            const safeFormat = (val) => {
+                if (val === 'N/A' || val === undefined || val === null) return '--';
+                const num = parseFloat(val);
+                return isNaN(num) ? '--' : `${currency}${num.toFixed(2)}`;
+            };
+
+            document.getElementById('metricHigh').textContent = safeFormat(high);
+            document.getElementById('metricLow').textContent = safeFormat(low);
+            document.getElementById('metricPrev').textContent = safeFormat(prev);
+        }
+
+        async function fetchAIAnalysis(data) {
+            const quote = data.quote;
+            const profile = data.profile;
+
+            const name = quote.name || quote.symbol;
+            const ticker = quote.symbol;
+            const currency = getCurrencySymbol(ticker);
+            const sector = profile.sector || 'Unknown';
+            const price = quote.price || 'N/A';
+            const change = quote.change || 0;
+            const changePercent = quote.changesPercentage || 0;
+            const marketCap = (quote.marketCap && typeof quote.marketCap === 'number') ? (quote.marketCap / 1e9).toFixed(2) + 'B' : 'N/A';
+
+            const prompt = `
+            You are a friendly financial analyst helping retail investors worldwide.
+   
+            Analyze this stock:
+            Company: ${name} (${ticker})
+            Price: ${currency}${price}
+            Change: ${change} (${changePercent}%)
+            Sector: ${sector}
+            Market Cap: ${marketCap}
+            
+            Provide EXACTLY this format:
+            
+            ### Context
+            [2-3 simple sentences about what's happening]
+            
+            ### Recommendation
+            [BUY / HOLD / WAIT] - [1 sentence why]
+            
+            ### Key Factors
+            • [Most important factor]
+            • [Second key point]
+            • [Third consideration]
+            • [What to watch]
+            
+            ### Risk Level
+            [Low / Medium / High] - [Brief explanation]
+            
+            Use simple language. Be conversational. This is education, not advice.
+            `;
+
+            // Use CORS proxy for local HTML file compatibility
+            const directUrl = "https://api.anthropic.com/v1/messages";
+            const corsProxy = "https://api.allorigins.win/raw?url=";
+            const url = corsProxy + encodeURIComponent(directUrl);
+
+            // Retry Logic for 503/429
+            let attempts = 0;
+            const maxAttempts = 3;
+
+            while (attempts < maxAttempts) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'x-api-key': CLAUDE_API_KEY,
+                            'anthropic-version': '2023-06-01',
+                            'content-type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: CLAUDE_MODEL,
+                            max_tokens: 1024,
+                            messages: [{ role: "user", content: prompt }]
+                        })
+                    });
+
+                    if (response.status === 503 || response.status === 429) {
+                        throw new Error(`AI service temporarily busy (${response.status})`);
+                    }
+
+                    if (!response.ok) {
+                        const errData = await response.json();
+                        throw new Error(errData.error?.message || `API Error ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    return result.content[0].text;
+
+                } catch (e) {
+                    attempts++;
+                    console.warn(`AI Attempt ${attempts} failed: ${e.message}`);
+
+                    if (e.message.includes('Failed to fetch') && attempts === maxAttempts) {
+                        throw new Error("Connection failed. Please check your Claude API key and internet connection.");
+                    }
+
+                    if (attempts >= maxAttempts) throw e;
+                    await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempts - 1)));
+                }
+            }
+        }
+
+        function renderAIAnalysis(markdownText) {
+            // Parse Markdown
+            document.getElementById('aiContent').innerHTML = marked.parse(markdownText);
+
+            // Extract Recommendation for Badge
+            const lowerText = markdownText.toLowerCase();
+            const badge = document.getElementById('recommendationBadge');
+
+            if (lowerText.includes('buy')) {
+                badge.className = "inline-flex items-center px-4 py-2 rounded-lg bg-emerald-100 text-emerald-800 font-bold text-lg";
+                badge.innerHTML = '<span class="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>BUY';
+            } else if (lowerText.includes('sell')) {
+                badge.className = "inline-flex items-center px-4 py-2 rounded-lg bg-red-100 text-red-800 font-bold text-lg";
+                badge.innerHTML = '<span class="w-2 h-2 bg-red-500 rounded-full mr-2"></span>SELL';
+            } else {
+                badge.className = "inline-flex items-center px-4 py-2 rounded-lg bg-yellow-100 text-yellow-800 font-bold text-lg";
+                badge.innerHTML = '<span class="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>HOLD';
+            }
+        }
+
+        // App ready
+        console.log("Mercury App Loaded");
+    </script>
+</body>
+
+</html>
