@@ -719,10 +719,8 @@ For Gemini API key:
             Use simple language. Be conversational. This is education, not advice.
             `;
 
-            // Use CORS proxy for local HTML file compatibility
-            const directUrl = "https://api.anthropic.com/v1/messages";
-            const corsProxy = "https://api.allorigins.win/raw?url=";
-            const url = corsProxy + encodeURIComponent(directUrl);
+            // Use Vercel Serverless Function
+            const url = "/api/analyze";
 
             // Retry Logic for 503/429
             let attempts = 0;
@@ -733,13 +731,11 @@ For Gemini API key:
                     const response = await fetch(url, {
                         method: 'POST',
                         headers: {
-                            'x-api-key': CLAUDE_API_KEY,
-                            'anthropic-version': '2023-06-01',
-                            'content-type': 'application/json'
+                            'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
+                            apiKey: CLAUDE_API_KEY,
                             model: CLAUDE_MODEL,
-                            max_tokens: 1024,
                             messages: [{ role: "user", content: prompt }]
                         })
                     });
@@ -750,7 +746,7 @@ For Gemini API key:
 
                     if (!response.ok) {
                         const errData = await response.json();
-                        throw new Error(errData.error?.message || `API Error ${response.status}`);
+                        throw new Error(errData.error || `API Error ${response.status}`);
                     }
 
                     const result = await response.json();
@@ -760,11 +756,10 @@ For Gemini API key:
                     attempts++;
                     console.warn(`AI Attempt ${attempts} failed: ${e.message}`);
 
-                    if (e.message.includes('Failed to fetch') && attempts === maxAttempts) {
-                        throw new Error("Connection failed. Please check your Claude API key and internet connection.");
+                    if (attempts >= maxAttempts) {
+                        throw new Error(`AI Analysis Failed: ${e.message}. Please check your API key.`);
                     }
 
-                    if (attempts >= maxAttempts) throw e;
                     await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempts - 1)));
                 }
             }
