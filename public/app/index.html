@@ -112,6 +112,192 @@
                 width: 100%;
             }
         }
+
+        /* ============================================
+           MERCURYSCORE COMPONENT STYLES
+           ============================================ */
+
+        .mercury-score-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 24px;
+            color: white;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .score-container {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .score-display {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            flex-shrink: 0;
+        }
+
+        .circular-progress {
+            width: 140px;
+            height: 140px;
+            transform: rotate(-90deg);
+        }
+
+        .bg-circle {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.2);
+            stroke-width: 12;
+        }
+
+        .progress-circle {
+            fill: none;
+            stroke-width: 12;
+            stroke-linecap: round;
+            stroke-dasharray: 314;
+            stroke-dashoffset: 314;
+            transition: stroke-dashoffset 2s cubic-bezier(0.4, 0, 0.2, 1),
+                stroke 0.5s ease;
+        }
+
+        .score-number {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .score-info {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .score-title {
+            font-size: 0.875rem;
+            opacity: 0.9;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .score-recommendation {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            line-height: 1.2;
+        }
+
+        .expand-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .expand-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .score-breakdown {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .score-breakdown.hidden {
+            display: none;
+        }
+
+        .breakdown-item {
+            margin-bottom: 16px;
+        }
+
+        .breakdown-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        .breakdown-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .breakdown-fill {
+            height: 100%;
+            background: white;
+            border-radius: 4px;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 0%;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes countUp {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 640px) {
+            .mercury-score-card {
+                padding: 20px;
+            }
+
+            .score-container {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+
+            .score-display {
+                width: 120px;
+                height: 120px;
+            }
+
+            .circular-progress {
+                width: 120px;
+                height: 120px;
+            }
+
+            .score-number {
+                font-size: 2.5rem;
+            }
+
+            .score-recommendation {
+                font-size: 1.5rem;
+            }
+        }
     </style>
 </head>
 
@@ -513,6 +699,10 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
 
         // Display Results
         async function displayResults(data) {
+            // Calculate and display MercuryScore first
+            const mercuryScore = await calculateMercuryScore(data.ticker, data);
+            displayMercuryScore(mercuryScore);
+
             const verdict = extractVerdict(data.aiAnalysis);
             const verdictClass = verdict === 'BUY' ? 'badge-buy' : verdict === 'HOLD' ? 'badge-hold' : 'badge-wait';
             const priceChange = data.quote.change >= 0;
@@ -851,6 +1041,425 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
                     }
                 }
             });
+        }
+
+        // ============================================
+        // MERCURYSCORE CALCULATION FUNCTIONS
+        // ============================================
+
+        // Helper: Calculate EMA (Exponential Moving Average)
+        function calculateEMA(prices, period) {
+            if (prices.length < period) return prices[prices.length - 1];
+
+            const multiplier = 2 / (period + 1);
+            let ema = prices.slice(0, period).reduce((a, b) => a + b) / period;
+
+            for (let i = period; i < prices.length; i++) {
+                ema = (prices[i] - ema) * multiplier + ema;
+            }
+
+            return ema;
+        }
+
+        // Helper: Calculate Simple Moving Average
+        function calculateSMA(prices, period) {
+            if (prices.length < period) return null;
+            const slice = prices.slice(-period);
+            return slice.reduce((a, b) => a + b) / slice.length;
+        }
+
+        // 1. Technical Indicators Score (0-3 points)
+        function calculateTechnicalScore(historicalData) {
+            try {
+                const prices = historicalData.map(h => h.close);
+                const volumes = historicalData.map(h => h.volume || 0);
+
+                let technicalScore = 0;
+
+                // RSI Score (0-1 point)
+                const rsi = calculateRSI(prices);
+                if (rsi !== null) {
+                    // Optimal RSI is 50, penalize extremes
+                    const rsiScore = Math.max(0, (70 - Math.abs(rsi - 50)) / 70);
+                    technicalScore += rsiScore;
+                }
+
+                // MACD Score (0-1 point)
+                const macdScore = calculateMACDScore(prices);
+                technicalScore += macdScore;
+
+                // Moving Average Score (0-1 point)
+                const maScore = calculateMAScore(prices);
+                technicalScore += maScore;
+
+                return Math.min(technicalScore, 3.0);
+            } catch (error) {
+                console.error('Technical score error:', error);
+                return 1.5; // Fallback to neutral
+            }
+        }
+
+        // Calculate RSI
+        function calculateRSI(prices, period = 14) {
+            if (prices.length < period + 1) return null;
+
+            let gains = 0, losses = 0;
+
+            for (let i = prices.length - period; i < prices.length; i++) {
+                const change = prices[i] - prices[i - 1];
+                if (change > 0) gains += change;
+                else losses -= change;
+            }
+
+            const avgGain = gains / period;
+            const avgLoss = losses / period;
+
+            if (avgLoss === 0) return 100;
+            const rs = avgGain / avgLoss;
+            return 100 - (100 / (1 + rs));
+        }
+
+        // Calculate MACD Score
+        function calculateMACDScore(prices) {
+            if (prices.length < 26) return 0.5; // Insufficient data
+
+            const ema12 = calculateEMA(prices, 12);
+            const ema26 = calculateEMA(prices, 26);
+            const macdLine = ema12 - ema26;
+
+            // Simplified: bullish if MACD > 0
+            return macdLine > 0 ? 1.0 : 0.3;
+        }
+
+        // Calculate Moving Average Score
+        function calculateMAScore(prices) {
+            if (prices.length < 50) return 0.5; // Insufficient data
+
+            const currentPrice = prices[prices.length - 1];
+            const ma50 = calculateSMA(prices, 50);
+            const ma200 = prices.length >= 200 ? calculateSMA(prices, 200) : null;
+
+            if (!ma50) return 0.5;
+
+            // Golden cross: Price > MA50 AND MA50 > MA200
+            if (ma200 && currentPrice > ma50 && ma50 > ma200) return 1.0;
+            // Price above 50-day MA
+            if (currentPrice > ma50) return 0.7;
+            // Death cross
+            return 0.2;
+        }
+
+        // 2. Fundamental Score (0-3 points)
+        function calculateFundamentalScore(quoteData) {
+            try {
+                let fundamentalScore = 0;
+
+                // P/E Ratio Score (0-1 point)
+                if (quoteData.pe && quoteData.pe > 0) {
+                    // Optimal P/E ~ 15, penalize extremes
+                    const peScore = Math.max(0, 1.0 - Math.min(Math.abs(quoteData.pe - 15) / 30, 1.0));
+                    fundamentalScore += peScore;
+                } else {
+                    fundamentalScore += 0.5; // Neutral if no P/E
+                }
+
+                // Market Cap Score (0-1 point) - Proxy for stability
+                const marketCap = quoteData.marketCap || 0;
+                if (marketCap > 200e9) {
+                    fundamentalScore += 0.9; // Large cap
+                } else if (marketCap > 10e9) {
+                    fundamentalScore += 0.7; // Mid cap
+                } else {
+                    fundamentalScore += 0.5; // Small cap
+                }
+
+                // EPS Score (0-1 point)
+                if (quoteData.eps && quoteData.eps > 0) {
+                    // Positive EPS is good, scale up to $10
+                    fundamentalScore += Math.min(quoteData.eps / 10, 1.0);
+                } else {
+                    fundamentalScore += 0.3; // Low score for negative/missing EPS
+                }
+
+                return Math.min(fundamentalScore, 3.0);
+            } catch (error) {
+                console.error('Fundamental score error:', error);
+                return 1.5; // Fallback
+            }
+        }
+
+        // 3. Market Sentiment Score (0-2 points)
+        function calculateSentimentScore(historicalData, quoteData) {
+            try {
+                let sentimentScore = 0;
+                const prices = historicalData.map(h => h.close);
+
+                // Volume Trend (0-1 point)
+                if (historicalData.length >= 20) {
+                    const currentVolume = quoteData.volume || 0;
+                    const avgVolume = historicalData.slice(-20).reduce((sum, h) => sum + (h.volume || 0), 0) / 20;
+
+                    if (currentVolume > avgVolume * 1.2) {
+                        sentimentScore += 1.0; // High interest
+                    } else if (currentVolume > avgVolume * 0.8) {
+                        sentimentScore += 0.6; // Normal
+                    } else {
+                        sentimentScore += 0.3; // Low interest
+                    }
+                } else {
+                    sentimentScore += 0.5;
+                }
+
+                // Price Momentum (0-1 point) - 7-day change
+                if (prices.length >= 7) {
+                    const priceNow = prices[prices.length - 1];
+                    const price7d = prices[prices.length - 7];
+                    const change7d = ((priceNow - price7d) / price7d) * 100;
+
+                    // Scale: -10% = 0, 0% = 0.5, +10% = 1.0
+                    const momentumScore = Math.max(0, Math.min((change7d + 10) / 20, 1.0));
+                    sentimentScore += momentumScore;
+                } else {
+                    sentimentScore += 0.5;
+                }
+
+                return Math.min(sentimentScore, 2.0);
+            } catch (error) {
+                console.error('Sentiment score error:', error);
+                return 1.0; // Fallback
+            }
+        }
+
+        // 4. News Sentiment Score (0-2 points)
+        function calculateNewsScore(newsData) {
+            try {
+                if (!newsData || newsData.length === 0) return 1.0; // Neutral if no news
+
+                const positiveKeywords = ['growth', 'profit', 'beats', 'record', 'surge', 'up', 'gain', 'rise', 'boost', 'strong'];
+                const negativeKeywords = ['loss', 'decline', 'misses', 'warning', 'falls', 'down', 'weak', 'drop', 'cut', 'concern'];
+
+                let positiveCount = 0;
+                let negativeCount = 0;
+
+                newsData.slice(0, 5).forEach(item => {
+                    const title = item.title.toLowerCase();
+
+                    positiveKeywords.forEach(keyword => {
+                        if (title.includes(keyword)) positiveCount++;
+                    });
+
+                    negativeKeywords.forEach(keyword => {
+                        if (title.includes(keyword)) negativeCount++;
+                    });
+                });
+
+                // Scale: -5 to +5 → 0 to 2.0
+                const newsScore = ((positiveCount - negativeCount + 5) / 10) * 2.0;
+                return Math.max(0, Math.min(newsScore, 2.0));
+            } catch (error) {
+                console.error('News score error:', error);
+                return 1.0; // Fallback
+            }
+        }
+
+        // Master MercuryScore Calculator
+        async function calculateMercuryScore(ticker, data) {
+            try {
+                // Fetch news if not already present
+                let newsData = data.news || [];
+                if (newsData.length === 0) {
+                    try {
+                        const newsRes = await fetch(`/api/stock?type=news&ticker=${ticker}`);
+                        newsData = await newsRes.json();
+                    } catch (e) {
+                        console.log('Could not fetch news for score');
+                    }
+                }
+
+                // Calculate component scores
+                const technical = calculateTechnicalScore(data.history || []);
+                const fundamentals = calculateFundamentalScore(data.quote);
+                const sentiment = calculateSentimentScore(data.history || [], data.quote);
+                const news = calculateNewsScore(newsData);
+
+                const totalScore = technical + fundamentals + sentiment + news;
+                const roundedScore = Math.round(totalScore * 10) / 10;
+
+                return {
+                    score: roundedScore,
+                    breakdown: {
+                        technical: Math.round(technical * 10) / 10,
+                        fundamentals: Math.round(fundamentals * 10) / 10,
+                        sentiment: Math.round(sentiment * 10) / 10,
+                        news: Math.round(news * 10) / 10
+                    },
+                    recommendation: getRecommendation(roundedScore),
+                    color: getScoreColor(roundedScore)
+                };
+            } catch (error) {
+                console.error('MercuryScore calculation error:', error);
+                return {
+                    score: 5.0,
+                    breakdown: { technical: 1.5, fundamentals: 1.5, sentiment: 1.0, news: 1.0 },
+                    recommendation: 'Hold',
+                    color: '#f59e0b'
+                };
+            }
+        }
+
+        // Get recommendation text based on score
+        function getRecommendation(score) {
+            if (score >= 8.0) return 'Strong Buy';
+            if (score >= 7.0) return 'Buy';
+            if (score >= 5.0) return 'Hold';
+            if (score >= 3.0) return 'Caution';
+            return 'Avoid';
+        }
+
+        // Get color based on score
+        function getScoreColor(score) {
+            if (score >= 7.0) return '#10b981'; // Green
+            if (score >= 4.0) return '#f59e0b'; // Yellow/Orange
+            return '#ef4444'; // Red
+        }
+
+        // Display MercuryScore Component
+        function displayMercuryScore(scoreData) {
+            const container = document.getElementById('mercuryScoreContainer');
+            if (!container) {
+                // Create the container if it doesn't exist
+                const resultsContainer = document.getElementById('resultsContainer');
+                const mercuryContainer = document.createElement('div');
+                mercuryContainer.id = 'mercuryScoreContainer';
+                resultsContainer.insertBefore(mercuryContainer, resultsContainer.firstChild);
+            }
+
+            const { score, breakdown, recommendation, color } = scoreData;
+
+            // Calculate progress (0-10 scale to 0-100%)
+            const progressPercent = (score / 10) * 100;
+            const circumference = 314; // 2 * π * radius (50)
+            const offset = circumference - (progressPercent / 100) * circumference;
+
+            const html = `
+                <div class="mercury-score-card">
+                    <div class="score-container">
+                        <div class="score-display">
+                            <svg class="circular-progress" viewBox="0 0 120 120">
+                                <circle class="bg-circle" cx="60" cy="60" r="50"></circle>
+                                <circle class="progress-circle" cx="60" cy="60" r="50" 
+                                        style="stroke: ${color}; stroke-dashoffset: ${offset};"></circle>
+                            </svg>
+                            <div class="score-number" id="scoreNumber">0.0</div>
+                        </div>
+                        <div class="score-info">
+                            <div class="score-title">MercuryScore™</div>
+                            <div class="score-recommendation">${recommendation}</div>
+                            <button class="expand-btn" onclick="toggleScoreBreakdown()">
+                                <span id="expandText">Show Breakdown ▼</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="score-breakdown hidden" id="scoreBreakdown">
+                        <div class="breakdown-item">
+                            <div class="breakdown-label">
+                                <span>Technical Indicators</span>
+                                <span>${breakdown.technical}/3.0</span>
+                            </div>
+                            <div class="breakdown-bar">
+                                <div class="breakdown-fill" data-width="${(breakdown.technical / 3) * 100}"></div>
+                            </div>
+                        </div>
+                        <div class="breakdown-item">
+                            <div class="breakdown-label">
+                                <span>Fundamentals</span>
+                                <span>${breakdown.fundamentals}/3.0</span>
+                            </div>
+                            <div class="breakdown-bar">
+                                <div class="breakdown-fill" data-width="${(breakdown.fundamentals / 3) * 100}"></div>
+                            </div>
+                        </div>
+                        <div class="breakdown-item">
+                            <div class="breakdown-label">
+                                <span>Market Sentiment</span>
+                                <span>${breakdown.sentiment}/2.0</span>
+                            </div>
+                            <div class="breakdown-bar">
+                                <div class="breakdown-fill" data-width="${(breakdown.sentiment / 2) * 100}"></div>
+                            </div>
+                        </div>
+                        <div class="breakdown-item">
+                            <div class="breakdown-label">
+                                <span>News Sentiment</span>
+                                <span>${breakdown.news}/2.0</span>
+                            </div>
+                            <div class="breakdown-bar">
+                                <div class="breakdown-fill" data-width="${(breakdown.news / 2) * 100}"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('mercuryScoreContainer').innerHTML = html;
+
+            // Animate score counting up
+            animateScoreNumber(score);
+        }
+
+        // Animate the score number counting up
+        function animateScoreNumber(targetScore, duration = 2000) {
+            const scoreElement = document.getElementById('scoreNumber');
+            if (!scoreElement) return;
+
+            const startTime = performance.now();
+
+            function updateScore(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+
+                // Easing function (ease-out cubic)
+                const eased = 1 - Math.pow(1 - progress, 3);
+                const currentScore = eased * targetScore;
+
+                scoreElement.textContent = currentScore.toFixed(1);
+
+                if (progress < 1) {
+                    requestAnimationFrame(updateScore);
+                } else {
+                    scoreElement.textContent = targetScore.toFixed(1);
+                    // Animate breakdown bars after score animation
+                    animateBreakdownBars();
+                }
+            }
+
+            requestAnimationFrame(updateScore);
+        }
+
+        // Animate breakdown bars
+        function animateBreakdownBars() {
+            const fills = document.querySelectorAll('.breakdown-fill');
+            setTimeout(() => {
+                fills.forEach(fill => {
+                    const width = fill.getAttribute('data-width');
+                    fill.style.width = width + '%';
+                });
+            }, 100);
+        }
+
+        // Toggle score breakdown visibility
+        function toggleScoreBreakdown() {
+            const breakdown = document.getElementById('scoreBreakdown');
+            const expandText = document.getElementById('expandText');
+
+            if (breakdown.classList.contains('hidden')) {
+                breakdown.classList.remove('hidden');
+                expandText.textContent = 'Hide Breakdown ▲';
+                animateBreakdownBars();
+            } else {
+                breakdown.classList.add('hidden');
+                expandText.textContent = 'Show Breakdown ▼';
+            }
         }
 
         // Utilities
