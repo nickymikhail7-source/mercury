@@ -948,7 +948,7 @@ Use emojis for each section (except Summary). Be conversational but professional
                     <!-- Header Section (Ticker, Price, MercuryScore) -->
                     <div class="dashboard-header">
                         <!-- Price Card -->
-                        <div class="card rounded-lg p-4 flex items-center justify-between">
+                        <div class="card rounded-lg p-4 flex items-center justify-between h-full">
                             <div>
                                 <h2 class="text-2xl font-bold">${data.profile.companyName || data.ticker}</h2>
                                 <div class="text-sm text-gray-500">${data.quote.symbol}</div>
@@ -962,12 +962,12 @@ Use emojis for each section (except Summary). Be conversational but professional
                         </div>
 
                         <!-- MercuryScore Container (Compact) -->
-                        <div id="mercuryScoreContainer" class="card rounded-lg p-0 overflow-hidden">
+                        <div id="mercuryScoreContainer" class="card rounded-lg p-0 overflow-hidden h-full">
                             <!-- Will be populated by displayMercuryScore -->
                         </div>
 
                         <!-- Key Metrics (Mini Grid) -->
-                        <div class="card rounded-lg p-4">
+                        <div class="card rounded-lg p-4 h-full">
                             <div class="mini-metrics-grid">
                                 ${data.quote.marketCap ? `
                                 <div class="mini-metric-card">
@@ -995,33 +995,31 @@ Use emojis for each section (except Summary). Be conversational but professional
 
                     <!-- Portfolio Section -->
                     <div class="portfolio-section">
-                        <div class="card rounded-lg p-4">
-                            <div class="flex justify-between items-center mb-3">
-                                <h3 class="text-sm font-bold text-gray-500 uppercase">For Your Portfolio</h3>
-                                <button class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-bold hover:bg-blue-200 transition">Connect Portfolio</button>
+                        <div class="flex justify-between items-center mb-3 px-1">
+                            <h3 class="text-sm font-bold text-gray-500 uppercase">For Your Portfolio</h3>
+                            <button class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-bold hover:bg-blue-200 transition">Connect Portfolio</button>
+                        </div>
+                        <div class="portfolio-grid">
+                            <div class="card bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800 fade-in h-full" style="animation-delay: 0.1s">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-lg">📊</span>
+                                    <span class="font-bold text-sm text-blue-800 dark:text-blue-300">Portfolio Impact</span>
+                                </div>
+                                <p class="text-xs text-blue-600 dark:text-blue-400 leading-relaxed">${portfolio.impact}</p>
                             </div>
-                            <div class="portfolio-grid">
-                                <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800 fade-in" style="animation-delay: 0.1s">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="text-lg">📊</span>
-                                        <span class="font-bold text-sm text-blue-800 dark:text-blue-300">Portfolio Impact</span>
-                                    </div>
-                                    <p class="text-xs text-blue-600 dark:text-blue-400">${portfolio.impact}</p>
+                            <div class="card bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-100 dark:border-yellow-800 fade-in h-full" style="animation-delay: 0.2s">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-lg">⚠️</span>
+                                    <span class="font-bold text-sm text-yellow-800 dark:text-yellow-300">Risk Alert</span>
                                 </div>
-                                <div class="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-100 dark:border-yellow-800 fade-in" style="animation-delay: 0.2s">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="text-lg">⚠️</span>
-                                        <span class="font-bold text-sm text-yellow-800 dark:text-yellow-300">Risk Alert</span>
-                                    </div>
-                                    <p class="text-xs text-yellow-600 dark:text-yellow-400">${portfolio.risk}</p>
+                                <p class="text-xs text-yellow-600 dark:text-yellow-400 leading-relaxed">${portfolio.risk}</p>
+                            </div>
+                            <div class="card bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800 fade-in h-full" style="animation-delay: 0.3s">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-lg">🎯</span>
+                                    <span class="font-bold text-sm text-green-800 dark:text-green-300">Better Entry</span>
                                 </div>
-                                <div class="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-100 dark:border-green-800 fade-in" style="animation-delay: 0.3s">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="text-lg">🎯</span>
-                                        <span class="font-bold text-sm text-green-800 dark:text-green-300">Better Entry</span>
-                                    </div>
-                                    <p class="text-xs text-green-600 dark:text-green-400">${portfolio.entry}</p>
-                                </div>
+                                <p class="text-xs text-green-600 dark:text-green-400 leading-relaxed">${portfolio.entry}</p>
                             </div>
                         </div>
                     </div>
