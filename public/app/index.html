@@ -700,8 +700,15 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
         // Display Results
         async function displayResults(data) {
             // Calculate and display MercuryScore first
-            const mercuryScore = await calculateMercuryScore(data.ticker, data);
-            displayMercuryScore(mercuryScore);
+            try {
+                console.log('Calculating MercuryScore for:', data.ticker);
+                const mercuryScore = await calculateMercuryScore(data.ticker, data);
+                console.log('MercuryScore calculated:', mercuryScore);
+                displayMercuryScore(mercuryScore);
+                console.log('MercuryScore displayed');
+            } catch (error) {
+                console.error('MercuryScore error:', error);
+            }
 
             const verdict = extractVerdict(data.aiAnalysis);
             const verdictClass = verdict === 'BUY' ? 'badge-buy' : verdict === 'HOLD' ? 'badge-hold' : 'badge-wait';
