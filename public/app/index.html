@@ -441,6 +441,14 @@
                 const profile = await profileRes.json();
                 const history = await historyRes.json();
 
+                // Check for API errors
+                if (quote.error) {
+                    if (quote.error === 'Missing FMP API key') {
+                        throw new Error('Please configure your FMP API key in Settings to view stock data.');
+                    }
+                    throw new Error(quote.error);
+                }
+
                 if (!quote || quote.length === 0) throw new Error('Stock not found');
 
                 const data = {
