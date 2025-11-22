@@ -90,6 +90,12 @@ export default async function handler(req, res) {
                 const keyStats = stats.defaultKeyStatistics || {};
                 const summary = stats.summaryDetail || {};
 
+                // Additional fetch for broader quote data (market cap, PE, EPS, etc.)
+                const quoteUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}`;
+                const quoteRes = await fetch(quoteUrl);
+                const quoteData = await quoteRes.json();
+                const quoteResult = quoteData?.quoteResponse?.result?.[0] || {};
+
                 const mappedData = [{
                     symbol: meta.symbol,
                     name: meta.shortName || meta.symbol,
@@ -100,12 +106,12 @@ export default async function handler(req, res) {
                     dayLow: meta.regularMarketDayLow,
                     previousClose: meta.chartPreviousClose,
                     volume: meta.regularMarketVolume,
-                    marketCap: summary.marketCap?.raw || 0,
-                    pe: summary.trailingPE?.raw || keyStats.trailingPE?.raw || null,
-                    eps: keyStats.trailingEps?.raw || null,
+                    marketCap: summary.marketCap?.raw || quoteResult.marketCap?.raw || 0,
+                    pe: summary.trailingPE?.raw || keyStats.trailingPE?.raw || quoteResult.trailingPE?.raw || null,
+                    eps: keyStats.trailingEps?.raw || quoteResult.epsTrailingTwelveMonths?.raw || null,
                     dividendYield: summary.dividendYield?.raw || summary.dividendRate?.raw || null,
-                    fiftyTwoWeekHigh: summary.fiftyTwoWeekHigh?.raw || null,
-                    fiftyTwoWeekLow: summary.fiftyTwoWeekLow?.raw || null
+                    fiftyTwoWeekHigh: summary.fiftyTwoWeekHigh?.raw || quoteResult.fiftyTwoWeekHigh?.raw || null,
+                    fiftyTwoWeekLow: summary.fiftyTwoWeekLow?.raw || quoteResult.fiftyTwoWeekLow?.raw || null
                 }];
 
                 return res.status(200).json(mappedData);
