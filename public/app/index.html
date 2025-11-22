@@ -677,18 +677,23 @@ SETUP INSTRUCTIONS:
 
             document.getElementById('companyName').textContent = data.profile.companyName || q.name || q.symbol;
             document.getElementById('tickerBadge').textContent = q.symbol;
-            document.getElementById('stockPrice').textContent = `${currency}${q.price.toFixed(2)}`;
+
+            const price = typeof q.price === 'number' ? q.price : 0;
+            document.getElementById('stockPrice').textContent = `${currency}${price.toFixed(2)}`;
+
+            const change = typeof q.change === 'number' ? q.change : 0;
+            const changePercent = typeof q.changesPercentage === 'number' ? q.changesPercentage : 0;
 
             const changeElem = document.getElementById('stockChange');
-            const isPositive = q.change >= 0;
-            changeElem.textContent = `${isPositive ? '+' : ''}${q.change.toFixed(2)} (${q.changesPercentage.toFixed(2)}%)`;
+            const isPositive = change >= 0;
+            changeElem.textContent = `${isPositive ? '+' : ''}${change.toFixed(2)} (${changePercent.toFixed(2)}%)`;
             changeElem.className = `text-lg font-medium mt-1 flex items-center justify-end gap-1 ${isPositive ? 'text-green-600' : 'text-red-600'}`;
 
             // Metrics
             document.getElementById('metricVolume').textContent = formatNumber(q.volume);
-            document.getElementById('metricHigh').textContent = `${currency}${q.dayHigh ? q.dayHigh.toFixed(2) : '--'}`;
-            document.getElementById('metricLow').textContent = `${currency}${q.dayLow ? q.dayLow.toFixed(2) : '--'}`;
-            document.getElementById('metricPrev').textContent = `${currency}${q.previousClose ? q.previousClose.toFixed(2) : '--'}`;
+            document.getElementById('metricHigh').textContent = `${currency}${typeof q.dayHigh === 'number' ? q.dayHigh.toFixed(2) : '--'}`;
+            document.getElementById('metricLow').textContent = `${currency}${typeof q.dayLow === 'number' ? q.dayLow.toFixed(2) : '--'}`;
+            document.getElementById('metricPrev').textContent = `${currency}${typeof q.previousClose === 'number' ? q.previousClose.toFixed(2) : '--'}`;
             document.getElementById('metricMktCap').textContent = formatMarketCap(q.marketCap);
 
             // Chart
