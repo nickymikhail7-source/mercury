@@ -699,13 +699,12 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
 
         // Display Results
         async function displayResults(data) {
-            // Calculate and display MercuryScore first
+            // Calculate MercuryScore first
+            let mercuryScore;
             try {
                 console.log('Calculating MercuryScore for:', data.ticker);
-                const mercuryScore = await calculateMercuryScore(data.ticker, data);
+                mercuryScore = await calculateMercuryScore(data.ticker, data);
                 console.log('MercuryScore calculated:', mercuryScore);
-                displayMercuryScore(mercuryScore);
-                console.log('MercuryScore displayed');
             } catch (error) {
                 console.error('MercuryScore error:', error);
             }
@@ -809,6 +808,11 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
 
             document.getElementById('resultsContainer').innerHTML = html;
             document.getElementById('resultsContainer').classList.remove('hidden');
+
+            // Display MercuryScore (must be after innerHTML is set)
+            if (typeof mercuryScore !== 'undefined') {
+                displayMercuryScore(mercuryScore);
+            }
 
             // Render chart
             renderChart(data.history, priceChange);
