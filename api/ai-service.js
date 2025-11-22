@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 export default async function handler(req, res) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
@@ -28,33 +26,35 @@ export default async function handler(req, res) {
 
         console.log(`Calling Anthropic API with model: ${model}`);
 
-        const response = await axios.post(
-            'https://api.anthropic.com/v1/messages',
-            {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
                 model: model,
                 max_tokens: 1024,
                 messages: messages
-            },
-            {
-                headers: {
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01',
-                    'content-type': 'application/json'
-                }
-            }
-        );
+            })
+        });
 
-        return res.status(200).json(response.data);
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error('Anthropic API Error:', data);
+            return res.status(response.status).json({
+                error: data.error?.message || 'Anthropic API Error',
+                type: data.error?.type,
+                details: data
+            });
+        }
+
+        return res.status(200).json(data);
 
     } catch (error) {
-        console.error('Proxy Error:', error.response?.data || error.message);
-
-        const status = error.response?.status || 500;
-        const message = error.response?.data?.error?.message || error.message;
-
-        return res.status(status).json({
-            error: message,
-            details: error.response?.data
-        });
+        console.error('Proxy Error:', error);
+        return res.status(500).json({ error: 'Internal Server Error', details: error.message });
     }
 }
