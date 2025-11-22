@@ -77,6 +77,36 @@ export default async function handler(req, res) {
         const quote = result.indicators.quote[0];
 
         if (type === 'quote') {
+            // Try to fetch extended metrics (P/E, EPS, Market Cap) with graceful fallback
+            let extendedMetrics = {
+                marketCap: meta.marketCap || 0,
+                pe: null,
+                eps: null,
+                dividendYield: null
+            };
+
+            try {
+                // Attempt to fetch quoteSummary for additional metrics
+                const summaryUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=summaryDetail,defaultKeyStatistics`;
+                const summaryRes = await fetch(summaryUrl);
+
+                if (summaryRes.ok) {
+                    const summaryData = await summaryRes.json();
+                    const summary = summaryData?.quoteSummary?.result?.[0] || {};
+                    const summaryDetail = summary.summaryDetail || {};
+                    const keyStats = summary.defaultKeyStatistics || {};
+
+                    // Extract metrics with fallbacks
+                    extendedMetrics.marketCap = summaryDetail.marketCap?.raw || meta.marketCap || 0;
+                    extendedMetrics.pe = summaryDetail.trailingPE?.raw || keyStats.trailingPE?.raw || null;
+                    extendedMetrics.eps = keyStats.trailingEps?.raw || null;
+                    extendedMetrics.dividendYield = summaryDetail.dividendYield?.raw || null;
+                }
+            } catch (summaryError) {
+                // Silently fail - use fallback values
+                console.log('QuoteSummary fetch failed, using fallback metrics');
+            }
+
             const mappedData = [{
                 symbol: meta.symbol,
                 name: meta.shortName || meta.symbol,
@@ -87,11 +117,10 @@ export default async function handler(req, res) {
                 dayLow: meta.regularMarketDayLow,
                 previousClose: meta.chartPreviousClose,
                 volume: meta.regularMarketVolume,
-                // Use metadata for additional info (no extra API calls needed)
-                marketCap: meta.marketCap || 0,
-                pe: null,  // Not available in chart endpoint
-                eps: null,  // Not available in chart endpoint
-                dividendYield: null,  // Not available in chart endpoint
+                marketCap: extendedMetrics.marketCap,
+                pe: extendedMetrics.pe,
+                eps: extendedMetrics.eps,
+                dividendYield: extendedMetrics.dividendYield,
                 fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh || null,
                 fiftyTwoWeekLow: meta.fiftyTwoWeekLow || null
             }];
