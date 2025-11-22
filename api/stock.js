@@ -81,20 +81,15 @@ export default async function handler(req, res) {
         // For quote type, also fetch key statistics
         if (type === 'quote') {
             try {
-                // Fetch summary detail for PE ratio and other metrics
-                const statsUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=defaultKeyStatistics,summaryDetail`;
-                const statsResponse = await fetch(statsUrl);
-                const statsData = await statsResponse.json();
+                // Fetch quoteSummary for detailed metrics
+                const summaryUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=defaultKeyStatistics,summaryDetail,financialData`;
+                const summaryRes = await fetch(summaryUrl);
+                const summaryData = await summaryRes.json();
 
-                const stats = statsData?.quoteSummary?.result?.[0] || {};
-                const keyStats = stats.defaultKeyStatistics || {};
-                const summary = stats.summaryDetail || {};
-
-                // Additional fetch for broader quote data (market cap, PE, EPS, etc.)
-                const quoteUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}`;
-                const quoteRes = await fetch(quoteUrl);
-                const quoteData = await quoteRes.json();
-                const quoteResult = quoteData?.quoteResponse?.result?.[0] || {};
+                const quoteSummary = summaryData?.quoteSummary?.result?.[0] || {};
+                const keyStats = quoteSummary.defaultKeyStatistics || {};
+                const summaryDetail = quoteSummary.summaryDetail || {};
+                const financialData = quoteSummary.financialData || {};
 
                 const mappedData = [{
                     symbol: meta.symbol,
@@ -106,15 +101,16 @@ export default async function handler(req, res) {
                     dayLow: meta.regularMarketDayLow,
                     previousClose: meta.chartPreviousClose,
                     volume: meta.regularMarketVolume,
-                    marketCap: summary.marketCap?.raw || quoteResult.marketCap?.raw || 0,
-                    pe: summary.trailingPE?.raw || keyStats.trailingPE?.raw || quoteResult.trailingPE?.raw || null,
-                    eps: keyStats.trailingEps?.raw || quoteResult.epsTrailingTwelveMonths?.raw || null,
-                    dividendYield: summary.dividendYield?.raw || summary.dividendRate?.raw || null,
-                    fiftyTwoWeekHigh: summary.fiftyTwoWeekHigh?.raw || quoteResult.fiftyTwoWeekHigh?.raw || null,
-                    fiftyTwoWeekLow: summary.fiftyTwoWeekLow?.raw || quoteResult.fiftyTwoWeekLow?.raw || null
+                    marketCap: summaryDetail.marketCap?.raw || meta.marketCap || 0,
+                    pe: summaryDetail.trailingPE?.raw || keyStats.trailingPE?.raw || null,
+                    eps: keyStats.trailingEps?.raw || financialData.trailingEps?.raw || null,
+                    dividendYield: summaryDetail.dividendYield?.raw || summaryDetail.dividendRate?.raw || null,
+                    fiftyTwoWeekHigh: summaryDetail.fiftyTwoWeekHigh?.raw || keyStats.fiftyTwoWeekHigh?.raw || null,
+                    fiftyTwoWeekLow: summaryDetail.fiftyTwoWeekLow?.raw || keyStats.fiftyTwoWeekLow?.raw || null
                 }];
 
                 return res.status(200).json(mappedData);
+
             } catch (statsError) {
                 console.error('Stats fetch error:', statsError);
                 // Fallback to basic data
