@@ -865,14 +865,17 @@
 Current Price: $${data.quote.price}
 Change: ${data.quote.change} (${data.quote.changesPercentage}%)
 
-Provide a concise, 3-paragraph analysis:
-1. What is happening with the stock right now? (Trend, momentum)
-2. Key risks or opportunities based on the data.
-3. A clear verdict: BUY, HOLD, or WAIT.
+Provide a structured analysis with these exact sections:
 
-Use simple language. Be conversational. This is education, not advice.
+SUMMARY: [One sentence summary of the current situation]
+PRICE_ACTION: [Analysis of trend/momentum]
+RISK: [Key risks]
+OPPORTUNITY: [Key growth drivers]
+VERDICT: [BUY/HOLD/WAIT]
 
-END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
+Use emojis for each section (except Summary). Be conversational but professional.`;
+
+            const systemPrompt = "You are a senior financial analyst. Output specific sections as requested.";
 
             try {
                 const response = await fetch("/api/gpt", {
@@ -921,9 +924,14 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
                 console.error('MercuryScore error:', error);
             }
 
-            const verdict = extractVerdict(data.aiAnalysis);
+            // Parse AI Analysis
+            const aiSections = parseAIAnalysis(data.aiAnalysis);
+            const verdict = aiSections.verdict || 'HOLD';
             const verdictClass = verdict === 'BUY' ? 'badge-buy' : verdict === 'HOLD' ? 'badge-hold' : 'badge-wait';
             const priceChange = data.quote.change >= 0;
+
+            // Portfolio Insights
+            const portfolio = getPortfolioInsights(data.ticker, data.quote.price);
 
             // Fetch news if not cached
             if (!data.news) {
@@ -961,22 +969,26 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
                         <!-- Key Metrics (Mini Grid) -->
                         <div class="card rounded-lg p-4">
                             <div class="mini-metrics-grid">
+                                ${data.quote.marketCap ? `
                                 <div class="mini-metric-card">
                                     <div class="text-xs text-gray-500">Market Cap</div>
                                     <div class="font-bold text-sm">${formatNumber(data.quote.marketCap)}</div>
-                                </div>
+                                </div>` : ''}
+                                ${data.quote.pe && data.quote.pe > 0 ? `
                                 <div class="mini-metric-card">
                                     <div class="text-xs text-gray-500">P/E Ratio</div>
-                                    <div class="font-bold text-sm">${data.quote.pe ? data.quote.pe.toFixed(2) : '--'}</div>
-                                </div>
+                                    <div class="font-bold text-sm">${data.quote.pe.toFixed(2)}</div>
+                                </div>` : ''}
+                                ${data.quote.volume ? `
                                 <div class="mini-metric-card">
                                     <div class="text-xs text-gray-500">Volume</div>
                                     <div class="font-bold text-sm">${formatNumber(data.quote.volume)}</div>
-                                </div>
+                                </div>` : ''}
+                                ${data.quote.eps ? `
                                 <div class="mini-metric-card">
                                     <div class="text-xs text-gray-500">EPS</div>
-                                    <div class="font-bold text-sm">${data.quote.eps ? '$' + data.quote.eps.toFixed(2) : '--'}</div>
-                                </div>
+                                    <div class="font-bold text-sm">$${data.quote.eps.toFixed(2)}</div>
+                                </div>` : ''}
                             </div>
                         </div>
                     </div>
@@ -986,29 +998,29 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
                         <div class="card rounded-lg p-4">
                             <div class="flex justify-between items-center mb-3">
                                 <h3 class="text-sm font-bold text-gray-500 uppercase">For Your Portfolio</h3>
-                                <button class="text-xs text-blue-500 hover:text-blue-600 font-medium">Connect Portfolio</button>
+                                <button class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-bold hover:bg-blue-200 transition">Connect Portfolio</button>
                             </div>
                             <div class="portfolio-grid">
-                                <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
+                                <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800 fade-in" style="animation-delay: 0.1s">
                                     <div class="flex items-center gap-2 mb-1">
                                         <span class="text-lg">📊</span>
                                         <span class="font-bold text-sm text-blue-800 dark:text-blue-300">Portfolio Impact</span>
                                     </div>
-                                    <p class="text-xs text-blue-600 dark:text-blue-400">Adding $1000 of ${data.ticker} would increase tech exposure to 45%</p>
+                                    <p class="text-xs text-blue-600 dark:text-blue-400">${portfolio.impact}</p>
                                 </div>
-                                <div class="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-100 dark:border-yellow-800">
+                                <div class="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-100 dark:border-yellow-800 fade-in" style="animation-delay: 0.2s">
                                     <div class="flex items-center gap-2 mb-1">
                                         <span class="text-lg">⚠️</span>
                                         <span class="font-bold text-sm text-yellow-800 dark:text-yellow-300">Risk Alert</span>
                                     </div>
-                                    <p class="text-xs text-yellow-600 dark:text-yellow-400">This stock has 0.8 correlation with your TSLA holding</p>
+                                    <p class="text-xs text-yellow-600 dark:text-yellow-400">${portfolio.risk}</p>
                                 </div>
-                                <div class="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-100 dark:border-green-800">
+                                <div class="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-100 dark:border-green-800 fade-in" style="animation-delay: 0.3s">
                                     <div class="flex items-center gap-2 mb-1">
                                         <span class="text-lg">🎯</span>
                                         <span class="font-bold text-sm text-green-800 dark:text-green-300">Better Entry</span>
                                     </div>
-                                    <p class="text-xs text-green-600 dark:text-green-400">Consider buying at $${(data.quote.price * 0.95).toFixed(2)} (support level)</p>
+                                    <p class="text-xs text-green-600 dark:text-green-400">${portfolio.entry}</p>
                                 </div>
                             </div>
                         </div>
@@ -1037,13 +1049,46 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
                     <!-- Sidebar (AI Analysis & News) -->
                     <div class="dashboard-sidebar">
                         <!-- AI Analysis -->
-                        <div class="card rounded-lg p-6 flex-1">
+                        <div class="card rounded-lg p-6 flex-1 flex flex-col">
                             <div class="flex items-center justify-between mb-4">
                                 <h3 class="text-lg font-bold">AI Analysis</h3>
                                 <span class="${verdictClass} px-3 py-1 rounded-full text-xs font-bold">${verdict}</span>
                             </div>
-                            <div class="prose max-w-none text-sm ai-analysis-scroll pr-2">
-                                ${data.aiAnalysis.replace(/\n/g, '<br>')}
+                            
+                            <!-- Summary Box -->
+                            <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg mb-4 border-l-4 border-blue-500">
+                                <div class="text-xs font-bold text-gray-500 uppercase mb-1">Mercury Says</div>
+                                <p class="text-sm font-medium text-gray-800 dark:text-gray-200">${aiSections.summary}</p>
+                            </div>
+
+                            <div class="space-y-3 ai-analysis-scroll pr-2 flex-1">
+                                <details class="group">
+                                    <summary class="flex items-center justify-between cursor-pointer list-none text-sm font-bold text-gray-700 dark:text-gray-300">
+                                        <span>📉 Price Action</span>
+                                        <span class="transition group-open:rotate-180">▼</span>
+                                    </summary>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-2 pl-4 border-l-2 border-gray-200 dark:border-gray-700">
+                                        ${aiSections.priceAction}
+                                    </p>
+                                </details>
+                                <details class="group">
+                                    <summary class="flex items-center justify-between cursor-pointer list-none text-sm font-bold text-gray-700 dark:text-gray-300">
+                                        <span>⚠️ Key Risks</span>
+                                        <span class="transition group-open:rotate-180">▼</span>
+                                    </summary>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-2 pl-4 border-l-2 border-gray-200 dark:border-gray-700">
+                                        ${aiSections.risk}
+                                    </p>
+                                </details>
+                                <details class="group" open>
+                                    <summary class="flex items-center justify-between cursor-pointer list-none text-sm font-bold text-gray-700 dark:text-gray-300">
+                                        <span>💡 Opportunity</span>
+                                        <span class="transition group-open:rotate-180">▼</span>
+                                    </summary>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-2 pl-4 border-l-2 border-gray-200 dark:border-gray-700">
+                                        ${aiSections.opportunity}
+                                    </p>
+                                </details>
                             </div>
                         </div>
 
@@ -1281,36 +1326,174 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
             searchStock(firstTicker);
         }
 
-        // Render Chart
+        // Render Chart (Advanced)
         let chartInstance = null;
         function renderChart(history, isPositive) {
             if (chartInstance) chartInstance.destroy();
 
             const ctx = document.getElementById('priceChart');
-            const labels = history.map(h => h.date).reverse();
-            const data = history.map(h => h.close).reverse();
+
+            // Prepare Data
+            const reversedHistory = [...history].reverse();
+            const labels = reversedHistory.map(h => h.date);
+            const prices = reversedHistory.map(h => h.close);
+            const volumes = reversedHistory.map(h => h.volume);
+
+            // Calculate Indicators
+            const sma50 = calculateSMAArray(prices, 50);
+            const sma200 = calculateSMAArray(prices, 200);
+
+            // Support & Resistance (30-day lookback)
+            const recentPrices = prices.slice(-30);
+            const support = Math.min(...recentPrices);
+            const resistance = Math.max(...recentPrices);
+            const supportLine = new Array(prices.length).fill(support);
+            const resistanceLine = new Array(prices.length).fill(resistance);
+
+            // Current Price Line
+            const currentPrice = prices[prices.length - 1];
+            const currentPriceLine = new Array(prices.length).fill(currentPrice);
 
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels,
-                    datasets: [{
-                        data,
-                        borderColor: isPositive ? '#10b981' : '#ef4444',
-                        backgroundColor: isPositive ? '#10b98120' : '#ef444420',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4
-                    }]
+                    datasets: [
+                        {
+                            label: 'Price',
+                            data: prices,
+                            borderColor: isPositive ? '#10b981' : '#ef4444',
+                            backgroundColor: isPositive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'SMA 50',
+                            data: sma50,
+                            borderColor: '#3b82f6',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            fill: false,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'SMA 200',
+                            data: sma200,
+                            borderColor: '#8b5cf6',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            fill: false,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Support',
+                            data: supportLine,
+                            borderColor: '#10b981',
+                            borderWidth: 1,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Resistance',
+                            data: resistanceLine,
+                            borderColor: '#ef4444',
+                            borderWidth: 1,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Volume',
+                            type: 'bar',
+                            data: volumes,
+                            backgroundColor: 'rgba(156, 163, 175, 0.3)',
+                            yAxisID: 'y1'
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { display: false } },
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                usePointStyle: true,
+                                boxWidth: 6
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        if (label.includes('Volume')) {
+                                            label += formatNumber(context.parsed.y);
+                                        } else {
+                                            label += '$' + context.parsed.y.toFixed(2);
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
                     scales: {
-                        y: { beginAtZero: false }
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: {
+                                color: 'rgba(156, 163, 175, 0.1)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: false,
+                            position: 'left',
+                            grid: {
+                                display: false
+                            },
+                            min: 0,
+                            max: Math.max(...volumes) * 5 // Push volume to bottom 20%
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                maxTicksLimit: 8
+                            }
+                        }
                     }
                 }
             });
+        }
+
+        function calculateSMAArray(data, period) {
+            let sma = [];
+            for (let i = 0; i < data.length; i++) {
+                if (i < period - 1) {
+                    sma.push(null);
+                    continue;
+                }
+                const slice = data.slice(i - period + 1, i + 1);
+                const sum = slice.reduce((a, b) => a + b, 0);
+                sma.push(sum / period);
+            }
+            return sma;
         }
 
         // ============================================
@@ -1665,44 +1848,87 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
             const offset = circumference - (progressPercent / 100) * circumference;
 
             const html = `
-                <div class="mercury-score-compact bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-lg shadow-lg relative">
-                    <!-- Left: Score Circle & Recommendation -->
-                    <div class="flex items-center gap-4">
-                        <div class="relative w-16 h-16 flex-shrink-0">
-                            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="45" fill="none" stroke="#374151" stroke-width="8" />
-                                <circle cx="50" cy="50" r="45" fill="none" stroke="${color}" stroke-width="8"
-                                    stroke-dasharray="${circumference}" stroke-dashoffset="${circumference}"
-                                    class="transition-all duration-1000 ease-out"
-                                    style="stroke-dashoffset: ${offset}" />
-                            </svg>
-                            <div class="absolute inset-0 flex items-center justify-center">
-                                <span class="text-xl font-bold score-number" data-target="${score}">0.0</span>
+                <div class="mercury-score-compact bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-lg shadow-lg relative transition-all duration-300" id="mercuryScoreCard">
+                    <!-- Compact View -->
+                    <div class="flex items-center justify-between w-full cursor-pointer" onclick="toggleMercuryDetails()">
+                        <div class="flex items-center gap-4">
+                            <div class="relative w-16 h-16 flex-shrink-0">
+                                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="45" fill="none" stroke="#374151" stroke-width="8" />
+                                    <circle cx="50" cy="50" r="45" fill="none" stroke="${color}" stroke-width="8"
+                                        stroke-dasharray="${circumference}" stroke-dashoffset="${circumference}"
+                                        class="transition-all duration-1000 ease-out"
+                                        style="stroke-dashoffset: ${offset}" />
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <span class="text-xl font-bold score-number" data-target="${score}">0.0</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-400 uppercase tracking-wider">MercuryScore</div>
+                                <div class="text-lg font-bold" style="color: ${color}">${recommendation}</div>
                             </div>
                         </div>
-                        <div>
-                            <div class="text-xs text-gray-400 uppercase tracking-wider">MercuryScore</div>
-                            <div class="text-lg font-bold" style="color: ${color}">${recommendation}</div>
+
+                        <div class="flex items-center gap-4">
+                            <div class="hidden md:flex gap-2">
+                                ${createCompactBreakdownItem('Tech', breakdown.technical, 3.0, reasoning?.technical)}
+                                ${createCompactBreakdownItem('Fund', breakdown.fundamentals, 3.0, reasoning?.fundamentals)}
+                                ${createCompactBreakdownItem('Sent', breakdown.sentiment, 2.0, reasoning?.sentiment)}
+                                ${createCompactBreakdownItem('News', breakdown.news, 2.0, reasoning?.news)}
+                            </div>
+                            <button class="text-gray-400 hover:text-white transition">
+                                <svg class="w-6 h-6 transform transition-transform" id="mercuryChevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
                         </div>
                     </div>
 
-                    <!-- Right: Compact Breakdown with Tooltips -->
-                    <div class="flex flex-col items-end ml-4 flex-1">
-                        <div class="flex gap-2 mb-1">
-                            ${createCompactBreakdownItem('Tech', breakdown.technical, 3.0, reasoning?.technical)}
-                            ${createCompactBreakdownItem('Fund', breakdown.fundamentals, 3.0, reasoning?.fundamentals)}
-                            ${createCompactBreakdownItem('Sent', breakdown.sentiment, 2.0, reasoning?.sentiment)}
-                            ${createCompactBreakdownItem('News', breakdown.news, 2.0, reasoning?.news)}
+                    <!-- Expanded Details (Hidden by default) -->
+                    <div id="mercuryDetails" class="hidden border-t border-gray-700 mt-4 pt-4 animate-fade-in">
+                        <h4 class="text-sm font-bold text-gray-400 uppercase mb-3">Score Contribution</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${createDetailItem('Technical Analysis', breakdown.technical, 3.0, reasoning?.technical, 'blue')}
+                            ${createDetailItem('Fundamentals', breakdown.fundamentals, 3.0, reasoning?.fundamentals, 'purple')}
+                            ${createDetailItem('Market Sentiment', breakdown.sentiment, 2.0, reasoning?.sentiment, 'yellow')}
+                            ${createDetailItem('News & Social', breakdown.news, 2.0, reasoning?.news, 'green')}
                         </div>
-                        <div class="text-[10px] text-gray-400 italic">Hover bars for details</div>
                     </div>
                 </div>
             `;
 
             container.innerHTML = html;
-
-            // Animate score counting up
             animateScoreNumber(score);
+        }
+
+        function createDetailItem(title, value, max, reasoning, color) {
+            const percent = (value / max) * 100;
+            return `
+                <div class="bg-gray-800/50 p-3 rounded-lg border border-gray-700">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-bold text-sm text-gray-300">${title}</span>
+                        <span class="text-xs font-mono bg-gray-900 px-2 py-1 rounded text-${color}-400">+${value} / ${max}</span>
+                    </div>
+                    <div class="w-full bg-gray-700 h-1.5 rounded-full mb-2">
+                        <div class="bg-${color}-500 h-1.5 rounded-full" style="width: ${percent}%"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 leading-relaxed">${reasoning || 'No data available'}</p>
+                </div>
+            `;
+        }
+
+        function toggleMercuryDetails() {
+            const details = document.getElementById('mercuryDetails');
+            const chevron = document.getElementById('mercuryChevron');
+
+            if (details.classList.contains('hidden')) {
+                details.classList.remove('hidden');
+                chevron.classList.add('rotate-180');
+            } else {
+                details.classList.add('hidden');
+                chevron.classList.remove('rotate-180');
+            }
         }
 
         function createCompactBreakdownItem(label, value, max, reasoning) {
@@ -1779,19 +2005,19 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
             fabContainer.className = 'fab-container';
             fabContainer.innerHTML = `
                 <div class="fab-menu">
-                    <div class="fab-item" onclick="showToast('Analyzing Portfolio...')" style="bottom: 140px; right: 10px;">
+                    <div class="fab-item" onclick="scrollToSection('portfolio-section')" style="bottom: 140px; right: 10px;">
                         <span>📊</span> Analyze Portfolio
                     </div>
-                    <div class="fab-item" onclick="showToast('Finding Opportunities...')" style="bottom: 110px; right: 60px;">
+                    <div class="fab-item" onclick="scrollToSection('portfolio-section', 'better-entry')" style="bottom: 110px; right: 60px;">
                         <span>🔍</span> Find Opportunities
                     </div>
-                    <div class="fab-item" onclick="showToast('Checking Risk...')" style="bottom: 70px; right: 90px;">
+                    <div class="fab-item" onclick="scrollToSection('portfolio-section', 'risk-alert')" style="bottom: 70px; right: 90px;">
                         <span>⚠️</span> Check Risk
                     </div>
-                    <div class="fab-item" onclick="showToast('Optimizing Taxes...')" style="bottom: 20px; right: 100px;">
+                    <div class="fab-item" onclick="showToast('Tax Optimization module coming in v2.0')" style="bottom: 20px; right: 100px;">
                         <span>💰</span> Tax Optimize
                     </div>
-                    <div class="fab-item" onclick="showToast('Ask Mercury AI...')" style="bottom: 160px; right: 0px;">
+                    <div class="fab-item" onclick="scrollToSection('dashboard-sidebar')" style="bottom: 160px; right: 0px;">
                         <span>🤖</span> Ask Mercury
                     </div>
                 </div>
@@ -1804,18 +2030,38 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
             document.body.appendChild(fabContainer);
         }
 
+        function scrollToSection(className, highlightId = null) {
+            const element = document.querySelector('.' + className);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                if (highlightId) {
+                    // Find the specific card and pulse it
+                    // This assumes we add IDs or specific classes to the cards. 
+                    // For now, we'll just highlight the section.
+                    element.classList.add('ring-2', 'ring-blue-500', 'transition-all');
+                    setTimeout(() => element.classList.remove('ring-2', 'ring-blue-500'), 2000);
+                }
+            }
+            toggleFAB();
+        }
+
         function toggleFAB() {
             document.querySelector('.fab-container').classList.toggle('active');
         }
 
-        // Create Buy Modal
+        // Multi-Step Buy Modal
+        let currentStep = 1;
+        const totalSteps = 4;
+
         function createBuyModal() {
             const modal = document.createElement('div');
             modal.id = 'buyModal';
             modal.className = 'modal-overlay';
             modal.innerHTML = `
-                <div class="modal-content bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-                    <div class="flex justify-between items-start mb-4">
+                <div class="modal-content bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl relative overflow-hidden">
+                    <!-- Header -->
+                    <div class="flex justify-between items-start mb-6">
                         <div>
                             <h3 class="text-xl font-bold" id="modalTicker">AAPL</h3>
                             <div class="text-sm text-gray-500">Strategic Analysis</div>
@@ -1826,40 +2072,80 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
                             </svg>
                         </button>
                     </div>
-                    
-                    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-6">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm font-bold text-blue-800 dark:text-blue-300">Mercury Score</span>
-                            <span class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="modalScore">8.5</span>
-                        </div>
-                        <p class="text-xs text-blue-600 dark:text-blue-400" id="modalReasoning">Strong technicals and positive sentiment suggest upside potential.</p>
+
+                    <!-- Progress Bar -->
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mb-6">
+                        <div class="bg-blue-600 h-1.5 rounded-full transition-all duration-300" id="modalProgress" style="width: 25%"></div>
                     </div>
 
-                    <div class="space-y-4 mb-6">
-                        <div class="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2">
-                            <span class="text-gray-500">Current Price</span>
-                            <span class="font-bold" id="modalPrice">$150.00</span>
-                        </div>
-                        <div class="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2">
-                            <span class="text-gray-500">Fair Value</span>
-                            <span class="font-bold text-green-500" id="modalFairValue">$165.00</span>
-                        </div>
-                        <div class="flex justify-between items-center pb-2">
-                            <span class="text-gray-500">Valuation</span>
-                            <span class="font-bold text-green-500">Undervalued by 10%</span>
+                    <!-- Step 1: Verdict -->
+                    <div class="modal-step active" id="step1">
+                        <div class="text-center mb-6">
+                            <div class="inline-block p-4 rounded-full bg-blue-50 dark:bg-blue-900/30 mb-4">
+                                <span class="text-4xl font-bold text-blue-600 dark:text-blue-400" id="modalScore">8.5</span>
+                            </div>
+                            <h4 class="text-xl font-bold mb-2">Mercury Score Verdict</h4>
+                            <p class="text-gray-600 dark:text-gray-300 text-sm" id="modalReasoning">Strong technicals and positive sentiment suggest upside potential.</p>
                         </div>
                     </div>
 
-                    <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-6">
-                        <div class="font-bold text-sm mb-1">Recommendation</div>
-                        <div class="text-sm text-gray-600 dark:text-gray-300" id="modalRecommendation">
-                            Consider accumulating at current levels. Support is strong at $145.
+                    <!-- Step 2: Valuation -->
+                    <div class="modal-step hidden" id="step2">
+                        <h4 class="text-lg font-bold mb-4">Fair Value Analysis</h4>
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2">
+                                <span class="text-gray-500">Current Price</span>
+                                <span class="font-bold" id="modalPrice">$150.00</span>
+                            </div>
+                            <div class="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2">
+                                <span class="text-gray-500">Fair Value</span>
+                                <span class="font-bold text-green-500" id="modalFairValue">$165.00</span>
+                            </div>
+                            <div class="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg text-center">
+                                <span class="text-green-700 dark:text-green-300 font-bold">Undervalued by 10%</span>
+                            </div>
                         </div>
                     </div>
 
-                    <button onclick="showToast('Price Alert Set!')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition transform active:scale-95">
-                        Set Price Alert
-                    </button>
+                    <!-- Step 3: Risk Check -->
+                    <div class="modal-step hidden" id="step3">
+                        <h4 class="text-lg font-bold mb-4">Risk Assessment</h4>
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                                <span class="text-2xl">⚠️</span>
+                                <div>
+                                    <div class="font-bold text-sm text-yellow-800 dark:text-yellow-300">Portfolio Overlap</div>
+                                    <div class="text-xs text-yellow-600 dark:text-yellow-400">High correlation with your Tech sector</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                <span class="text-2xl">📉</span>
+                                <div>
+                                    <div class="font-bold text-sm text-blue-800 dark:text-blue-300">Volatility</div>
+                                    <div class="text-xs text-blue-600 dark:text-blue-400">Beta is 1.5 (50% more volatile than market)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Action -->
+                    <div class="modal-step hidden" id="step4">
+                        <h4 class="text-lg font-bold mb-4">Final Recommendation</h4>
+                        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-6">
+                            <div class="text-sm text-gray-600 dark:text-gray-300" id="modalRecommendation">
+                                Consider accumulating at current levels. Support is strong at $145.
+                            </div>
+                        </div>
+                        <button onclick="showToast('Price Alert Set!')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition transform active:scale-95 mb-2">
+                            Set Price Alert
+                        </button>
+                    </div>
+
+                    <!-- Navigation -->
+                    <div class="flex justify-between mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <button onclick="prevStep()" class="text-gray-400 hover:text-gray-600 font-medium px-4 py-2 rounded-lg" id="prevBtn" disabled>Back</button>
+                        <button onclick="nextStep()" class="bg-gray-900 dark:bg-gray-700 text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition" id="nextBtn">Next</button>
+                    </div>
                 </div>
             `;
             document.body.appendChild(modal);
@@ -1878,11 +2164,109 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
             const fairValue = price * (parseFloat(score) > 7 ? 1.1 : 0.9);
             document.getElementById('modalFairValue').textContent = '$' + fairValue.toFixed(2);
 
+            // Reset to Step 1
+            currentStep = 1;
+            updateModalSteps();
             modal.classList.add('active');
+        }
+
+        function nextStep() {
+            if (currentStep < totalSteps) {
+                currentStep++;
+                updateModalSteps();
+            } else {
+                closeBuyModal();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                updateModalSteps();
+            }
+        }
+
+        function updateModalSteps() {
+            // Update Progress Bar
+            document.getElementById('modalProgress').style.width = `${(currentStep / totalSteps) * 100}%`;
+
+            // Show/Hide Steps
+            for (let i = 1; i <= totalSteps; i++) {
+                const step = document.getElementById(`step${i}`);
+                if (i === currentStep) {
+                    step.classList.remove('hidden');
+                    step.classList.add('active', 'fade-in');
+                } else {
+                    step.classList.add('hidden');
+                    step.classList.remove('active');
+                }
+            }
+
+            // Update Buttons
+            document.getElementById('prevBtn').disabled = currentStep === 1;
+            document.getElementById('prevBtn').classList.toggle('opacity-50', currentStep === 1);
+
+            const nextBtn = document.getElementById('nextBtn');
+            if (currentStep === totalSteps) {
+                nextBtn.textContent = 'Finish';
+                nextBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                nextBtn.classList.remove('bg-gray-900', 'dark:bg-gray-700');
+            } else {
+                nextBtn.textContent = 'Next';
+                nextBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                nextBtn.classList.add('bg-gray-900', 'dark:bg-gray-700');
+            }
         }
 
         function closeBuyModal() {
             document.getElementById('buyModal').classList.remove('active');
+        }
+        // ============================================
+        // HELPER FUNCTIONS
+        // ============================================
+
+        function getPortfolioInsights(ticker, price) {
+            // Mock logic for demo purposes
+            const isTech = ['AAPL', 'MSFT', 'GOOGL', 'NVDA', 'TSLA', 'AMD'].includes(ticker);
+            const impactPct = isTech ? 45 : 12;
+            const correlation = isTech ? 0.8 : 0.2;
+            const supportLevel = (price * 0.95).toFixed(2);
+
+            return {
+                impact: `Adding $1000 of ${ticker} would increase ${isTech ? 'tech' : 'diversified'} exposure to ${impactPct}%`,
+                risk: `This stock has ${correlation} correlation with your TSLA holding`,
+                entry: `Consider buying at $${supportLevel} (support level)`
+            };
+        }
+
+        function parseAIAnalysis(text) {
+            const sections = {
+                summary: "Analysis unavailable",
+                priceAction: "No data",
+                risk: "No data",
+                opportunity: "No data",
+                verdict: "HOLD"
+            };
+
+            try {
+                const summaryMatch = text.match(/SUMMARY:\s*(.+?)(?=PRICE_ACTION:|$)/s);
+                const priceMatch = text.match(/PRICE_ACTION:\s*(.+?)(?=RISK:|$)/s);
+                const riskMatch = text.match(/RISK:\s*(.+?)(?=OPPORTUNITY:|$)/s);
+                const oppMatch = text.match(/OPPORTUNITY:\s*(.+?)(?=VERDICT:|$)/s);
+                const verdictMatch = text.match(/VERDICT:\s*(.+?)(?=$)/s);
+
+                if (summaryMatch) sections.summary = summaryMatch[1].trim();
+                if (priceMatch) sections.priceAction = priceMatch[1].trim();
+                if (riskMatch) sections.risk = riskMatch[1].trim();
+                if (oppMatch) sections.opportunity = oppMatch[1].trim();
+                if (verdictMatch) sections.verdict = verdictMatch[1].trim().toUpperCase();
+            } catch (e) {
+                console.error("Error parsing AI analysis:", e);
+                // Fallback for old format
+                sections.summary = text.substring(0, 150) + "...";
+            }
+
+            return sections;
         }
     </script>
 </body>
