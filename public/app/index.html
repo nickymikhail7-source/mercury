@@ -567,11 +567,11 @@ SETUP INSTRUCTIONS:
 
             try {
                 // Fetch Quote
-                const quoteRes = await fetch(`https://financialmodelingprep.com/stable/quote?symbol=${ticker}&apikey=${FMP_API_KEY}`);
+                const quoteRes = await fetch(`https://financialmodelingprep.com/api/v3/quote/${ticker}?apikey=${FMP_API_KEY}`);
                 const quoteData = await quoteRes.json();
 
                 // Fetch Profile (for description)
-                const profileRes = await fetch(`https://financialmodelingprep.com/stable/profile?symbol=${ticker}&apikey=${FMP_API_KEY}`);
+                const profileRes = await fetch(`https://financialmodelingprep.com/api/v3/profile/${ticker}?apikey=${FMP_API_KEY}`);
                 const profileData = await profileRes.json();
 
                 // Fetch Historical (for chart)
