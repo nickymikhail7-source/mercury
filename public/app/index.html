@@ -390,7 +390,11 @@
 
             } catch (e) {
                 console.error("AI Error:", e);
-                return `<p class="text-red-600">AI Analysis Unavailable: ${e.message}</p>`;
+                return `<div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <h4 class="text-red-800 font-bold mb-2">AI Analysis Failed</h4>
+                    <p class="text-red-600 text-sm">${e.message}</p>
+                    <p class="text-red-500 text-xs mt-2">Please check your API key and credits.</p>
+                </div>`;
             }
         }
 
