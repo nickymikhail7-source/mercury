@@ -13,16 +13,19 @@ export default async function handler(req, res) {
         return;
     }
 
-    const { ticker, type } = req.query;
+    const { ticker, type, apiKey } = req.query;
 
     if (!ticker) {
         return res.status(400).json({ error: 'Missing ticker' });
     }
 
+    // For FMP requests, require API key
+    const FMP_API_KEY = apiKey || process.env.FMP_API_KEY;
+
     try {
         // Handle news requests
         if (type === 'news') {
-            // Use Yahoo Finance RSS feed for news
+            // Use Yahoo Finance RSS feed for news (free, no API key needed)
             const newsUrl = `https://feeds.finance.yahoo.com/rss/2.0/headline?s=${ticker}&region=US&lang=en-US`;
 
             try {
@@ -56,107 +59,95 @@ export default async function handler(req, res) {
             }
         }
 
-        // Yahoo Finance API for stock data
-        let url = '';
-        let range = '1d';
-        let interval = '1d';
-
-        if (type === 'history') {
-            range = '1mo';
-        }
-
-        url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&range=${range}`;
-
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (!response.ok || !data.chart || !data.chart.result) {
-            return res.status(404).json({ error: 'Stock not found' });
-        }
-
-        const result = data.chart.result[0];
-        const meta = result.meta;
-        const quote = result.indicators.quote[0];
-
-        // For quote type, also fetch key statistics
+        // Use FMP API for stock data (more reliable than Yahoo Finance)
         if (type === 'quote') {
-            try {
-                // Fetch quoteSummary for detailed metrics
-                const summaryUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=defaultKeyStatistics,summaryDetail,financialData`;
-                const summaryRes = await fetch(summaryUrl);
-                const summaryData = await summaryRes.json();
-
-                const quoteSummary = summaryData?.quoteSummary?.result?.[0] || {};
-                const keyStats = quoteSummary.defaultKeyStatistics || {};
-                const summaryDetail = quoteSummary.summaryDetail || {};
-                const financialData = quoteSummary.financialData || {};
-
-                const mappedData = [{
-                    symbol: meta.symbol,
-                    name: meta.shortName || meta.symbol,
-                    price: meta.regularMarketPrice,
-                    change: meta.regularMarketPrice - meta.chartPreviousClose,
-                    changesPercentage: ((meta.regularMarketPrice - meta.chartPreviousClose) / meta.chartPreviousClose) * 100,
-                    dayHigh: meta.regularMarketDayHigh,
-                    dayLow: meta.regularMarketDayLow,
-                    previousClose: meta.chartPreviousClose,
-                    volume: meta.regularMarketVolume,
-                    marketCap: summaryDetail.marketCap?.raw || meta.marketCap || 0,
-                    pe: summaryDetail.trailingPE?.raw || keyStats.trailingPE?.raw || null,
-                    eps: keyStats.trailingEps?.raw || financialData.trailingEps?.raw || null,
-                    dividendYield: summaryDetail.dividendYield?.raw || summaryDetail.dividendRate?.raw || null,
-                    fiftyTwoWeekHigh: summaryDetail.fiftyTwoWeekHigh?.raw || keyStats.fiftyTwoWeekHigh?.raw || null,
-                    fiftyTwoWeekLow: summaryDetail.fiftyTwoWeekLow?.raw || keyStats.fiftyTwoWeekLow?.raw || null
-                }];
-
-                return res.status(200).json(mappedData);
-
-            } catch (statsError) {
-                console.error('Stats fetch error:', statsError);
-                // Fallback to basic data
-                const mappedData = [{
-                    symbol: meta.symbol,
-                    name: meta.shortName || meta.symbol,
-                    price: meta.regularMarketPrice,
-                    change: meta.regularMarketPrice - meta.chartPreviousClose,
-                    changesPercentage: ((meta.regularMarketPrice - meta.chartPreviousClose) / meta.chartPreviousClose) * 100,
-                    dayHigh: meta.regularMarketDayHigh,
-                    dayLow: meta.regularMarketDayLow,
-                    previousClose: meta.chartPreviousClose,
-                    volume: meta.regularMarketVolume,
-                    marketCap: 0,
-                    pe: null,
-                    eps: null,
-                    dividendYield: null,
-                    fiftyTwoWeekHigh: null,
-                    fiftyTwoWeekLow: null
-                }];
-                return res.status(200).json(mappedData);
+            if (!FMP_API_KEY) {
+                return res.status(400).json({ error: 'Missing FMP API key' });
             }
-        } else if (type === 'profile') {
+
+            // Fetch quote data from FMP
+            const quoteUrl = `https://financialmodelingprep.com/api/v3/quote/${ticker}?apikey=${FMP_API_KEY}`;
+            const response = await fetch(quoteUrl);
+            const quoteData = await response.json();
+
+            if (!response.ok || !quoteData || quoteData.length === 0) {
+                return res.status(404).json({ error: 'Stock not found' });
+            }
+
+            const quote = quoteData[0];
+
             const mappedData = [{
-                companyName: meta.shortName || meta.symbol,
-                symbol: meta.symbol,
-                description: `Analysis for ${meta.shortName}. ${meta.instrumentType} trading on ${meta.exchangeName}.`,
-                industry: meta.instrumentType,
-                sector: meta.exchangeName
+                symbol: quote.symbol,
+                name: quote.name,
+                price: quote.price,
+                change: quote.change,
+                changesPercentage: quote.changesPercentage,
+                dayHigh: quote.dayHigh,
+                dayLow: quote.dayLow,
+                previousClose: quote.previousClose,
+                volume: quote.volume,
+                marketCap: quote.marketCap,
+                pe: quote.pe,
+                eps: quote.eps,
+                dividendYield: quote.dividendYield || null,
+                fiftyTwoWeekHigh: quote.yearHigh,
+                fiftyTwoWeekLow: quote.yearLow
             }];
+
+            return res.status(200).json(mappedData);
+        } else if (type === 'profile') {
+            if (!FMP_API_KEY) {
+                return res.status(400).json({ error: 'Missing FMP API key' });
+            }
+
+            // Fetch company profile from FMP
+            const profileUrl = `https://financialmodelingprep.com/api/v3/profile/${ticker}?apikey=${FMP_API_KEY}`;
+            const response = await fetch(profileUrl);
+            const profileData = await response.json();
+
+            if (!response.ok || !profileData || profileData.length === 0) {
+                return res.status(404).json({ error: 'Stock not found' });
+            }
+
+            const profile = profileData[0];
+
+            const mappedData = [{
+                companyName: profile.companyName,
+                symbol: profile.symbol,
+                description: profile.description,
+                industry: profile.industry,
+                sector: profile.sector
+            }];
+
             return res.status(200).json(mappedData);
         } else if (type === 'history') {
-            const timestamps = result.timestamp;
-            const closes = quote.close;
+            if (!FMP_API_KEY) {
+                return res.status(400).json({ error: 'Missing FMP API key' });
+            }
+
+            // Fetch historical data from FMP (last 30 days)
+            const historyUrl = `https://financialmodelingprep.com/api/v3/historical-price-full/${ticker}?apikey=${FMP_API_KEY}`;
+            const response = await fetch(historyUrl);
+            const historyData = await response.json();
+
+            if (!response.ok || !historyData || !historyData.historical) {
+                return res.status(404).json({ error: 'Stock not found' });
+            }
 
             const mappedData = {
-                historical: timestamps.map((t, i) => ({
-                    date: new Date(t * 1000).toISOString().split('T')[0],
-                    close: closes[i]
+                historical: historyData.historical.slice(0, 30).map(item => ({
+                    date: item.date,
+                    close: item.close
                 })).reverse()
             };
+
             return res.status(200).json(mappedData);
         }
 
+        return res.status(400).json({ error: 'Invalid type parameter' });
+
     } catch (error) {
-        console.error('Yahoo Proxy Error:', error);
+        console.error('FMP Proxy Error:', error);
         return res.status(500).json({ error: 'Internal Server Error', details: error.message });
     }
 }
