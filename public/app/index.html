@@ -503,10 +503,20 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
         }
 
         // Display Results
-        function displayResults(data) {
+        async function displayResults(data) {
             const verdict = extractVerdict(data.aiAnalysis);
             const verdictClass = verdict === 'BUY' ? 'badge-buy' : verdict === 'HOLD' ? 'badge-hold' : 'badge-wait';
             const priceChange = data.quote.change >= 0;
+
+            // Fetch news if not cached
+            if (!data.news) {
+                try {
+                    const newsRes = await fetch(`/api/stock?type=news&ticker=${data.ticker}`);
+                    data.news = await newsRes.json();
+                } catch (e) {
+                    data.news = [];
+                }
+            }
 
             const html = `
                 <div class="fade-in">
@@ -521,13 +531,28 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
                             ${priceChange ? '+' : ''}${data.quote.change.toFixed(2)} (${data.quote.changesPercentage.toFixed(2)}%)
                         </div>
                         <div class="text-sm text-gray-500 mt-2">${data.quote.symbol}</div>
+                        ${!comparisonMode ? `<button onclick="startComparison('${data.ticker}')" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-sm">
+                            Compare with Another Stock
+                        </button>` : ''}
                     </div>
 
-                    <!-- Metrics Grid -->
+                    <!-- Extended Metrics Grid -->
                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <div class="card rounded-lg p-4">
                             <div class="text-sm text-gray-500 mb-1">Volume</div>
                             <div class="text-xl font-bold">${formatNumber(data.quote.volume)}</div>
+                        </div>
+                        <div class="card rounded-lg p-4">
+                            <div class="text-sm text-gray-500 mb-1">Market Cap</div>
+                            <div class="text-xl font-bold">${formatNumber(data.quote.marketCap)}</div>
+                        </div>
+                        <div class="card rounded-lg p-4">
+                            <div class="text-sm text-gray-500 mb-1">P/E Ratio</div>
+                            <div class="text-xl font-bold">${data.quote.pe ? data.quote.pe.toFixed(2) : '--'}</div>
+                        </div>
+                        <div class="card rounded-lg p-4">
+                            <div class="text-sm text-gray-500 mb-1">EPS</div>
+                            <div class="text-xl font-bold">${data.quote.eps ? '$' + data.quote.eps.toFixed(2) : '--'}</div>
                         </div>
                         <div class="card rounded-lg p-4">
                             <div class="text-sm text-gray-500 mb-1">Day High</div>
@@ -538,8 +563,12 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
                             <div class="text-xl font-bold">$${data.quote.dayLow?.toFixed(2) || '--'}</div>
                         </div>
                         <div class="card rounded-lg p-4">
-                            <div class="text-sm text-gray-500 mb-1">Prev Close</div>
-                            <div class="text-xl font-bold">$${data.quote.previousClose?.toFixed(2) || '--'}</div>
+                            <div class="text-sm text-gray-500 mb-1">52W High</div>
+                            <div class="text-xl font-bold">${data.quote.fiftyTwoWeekHigh ? '$' + data.quote.fiftyTwoWeekHigh.toFixed(2) : '--'}</div>
+                        </div>
+                        <div class="card rounded-lg p-4">
+                            <div class="text-sm text-gray-500 mb-1">52W Low</div>
+                            <div class="text-xl font-bold">${data.quote.fiftyTwoWeekLow ? '$' + data.quote.fiftyTwoWeekLow.toFixed(2) : '--'}</div>
                         </div>
                     </div>
 
@@ -548,6 +577,21 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
                         <h3 class="text-lg font-bold mb-4">Price History (30 Days)</h3>
                         <canvas id="priceChart"></canvas>
                     </div>
+
+                    <!-- News Headlines -->
+                    ${data.news && data.news.length > 0 ? `
+                    <div class="card rounded-lg p-6 mb-6">
+                        <h3 class="text-lg font-bold mb-4">Recent News</h3>
+                        <div class="space-y-3">
+                            ${data.news.map(item => `
+                                <a href="${item.link}" target="_blank" class="block p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                    <div class="font-medium text-blue-500 hover:text-blue-600">${item.title}</div>
+                                    ${item.pubDate ? `<div class="text-xs text-gray-500 mt-1">${new Date(item.pubDate).toLocaleDateString()}</div>` : ''}
+                                </a>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
 
                     <!-- AI Analysis -->
                     <div class="card rounded-lg p-6">
@@ -579,6 +623,193 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
                 </div>
             `;
             document.getElementById('resultsContainer').classList.remove('hidden');
+        }
+
+        // Comparison Mode
+        function startComparison(firstTicker) {
+            comparisonMode = true;
+            comparisonStocks = [firstTicker];
+
+            const promptHtml = `
+                <div class="card rounded-lg p-8 text-center fade-in">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 00-2-2m0 0h2a2 2 0 012 2v10m-6 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    <h3 class="text-2xl font-bold mb-4">Compare ${firstTicker} with...</h3>
+                    <p class="text-gray-500 mb-6">Enter another stock symbol to compare</p>
+                    <div class="max-w-md mx-auto">
+                        <input 
+                            type="text" 
+                            id="compareInput" 
+                            placeholder="Enter ticker (e.g., TSLA)" 
+                            class="w-full px-4 py-3 card rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+                            onkeypress="if(event.key==='Enter') compareStock('${firstTicker}')"
+                        >
+                        <div class="flex gap-3">
+                            <button onclick="compareStock('${firstTicker}')" class="flex-1 bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 font-medium">
+                                Compare
+                            </button>
+                            <button onclick="cancelComparison()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 font-medium">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('resultsContainer').innerHTML = promptHtml;
+            setTimeout(() => document.getElementById('compareInput').focus(), 100);
+        }
+
+        function cancelComparison() {
+            comparisonMode = false;
+            comparisonStocks = [];
+            searchStock(comparisonStocks[0] || '');
+        }
+
+        async function compareStock(firstTicker) {
+            const secondTicker = document.getElementById('compareInput').value.toUpperCase().trim();
+            if (!secondTicker) return;
+
+            comparisonStocks = [firstTicker, secondTicker];
+
+            // Show loading
+            document.getElementById('resultsContainer').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+            showLoadingBar();
+
+            try {
+                // Fetch both stocks
+                const [data1, data2] = await Promise.all([
+                    fetchStockData(firstTicker),
+                    fetchStockData(secondTicker)
+                ]);
+
+                displayComparison(data1, data2);
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                hideLoadingBar();
+                document.getElementById('loadingState').classList.add('hidden');
+            }
+        }
+
+        async function fetchStockData(ticker) {
+            const [quoteRes, profileRes, historyRes] = await Promise.all([
+                fetch(`/api/stock?type=quote&ticker=${ticker}`),
+                fetch(`/api/stock?type=profile&ticker=${ticker}`),
+                fetch(`/api/stock?type=history&ticker=${ticker}`)
+            ]);
+
+            const quote = await quoteRes.json();
+            const profile = await profileRes.json();
+            const history = await historyRes.json();
+
+            if (!quote || quote.length === 0) throw new Error(`Stock ${ticker} not found`);
+
+            return {
+                ticker,
+                quote: quote[0],
+                profile: profile[0] || {},
+                history: history.historical || []
+            };
+        }
+
+        function displayComparison(data1, data2) {
+            const priceChange1 = data1.quote.change >= 0;
+            const priceChange2 = data2.quote.change >= 0;
+
+            const html = `
+                <div class="fade-in">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">Stock Comparison</h2>
+                        <button onclick="exitComparison()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">
+                            Exit Comparison
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        ${createComparisonCard(data1, priceChange1)}
+                        ${createComparisonCard(data2, priceChange2)}
+                    </div>
+
+                    <!-- Comparison Table -->
+                    <div class="card rounded-lg p-6 overflow-x-auto">
+                        <h3 class="text-lg font-bold mb-4">Side-by-Side Metrics</h3>
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200 dark:border-gray-700">
+                                    <th class="text-left py-3 font-medium">Metric</th>
+                                    <th class="text-right py-3 font-medium">${data1.ticker}</th>
+                                    <th class="text-right py-3 font-medium">${data2.ticker}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${createComparisonRow('Price', '$' + data1.quote.price.toFixed(2), '$' + data2.quote.price.toFixed(2), data1.quote.price, data2.quote.price, true)}
+                                ${createComparisonRow('Change %', data1.quote.changesPercentage.toFixed(2) + '%', data2.quote.changesPercentage.toFixed(2) + '%', data1.quote.changesPercentage, data2.quote.changesPercentage, true)}
+                                ${createComparisonRow('Market Cap', formatNumber(data1.quote.marketCap), formatNumber(data2.quote.marketCap), data1.quote.marketCap, data2.quote.marketCap, true)}
+                                ${createComparisonRow('Volume', formatNumber(data1.quote.volume), formatNumber(data2.quote.volume), data1.quote.volume, data2.quote.volume, true)}
+                                ${createComparisonRow('P/E Ratio', data1.quote.pe ? data1.quote.pe.toFixed(2) : '--', data2.quote.pe ? data2.quote.pe.toFixed(2) : '--', data1.quote.pe || 0, data2.quote.pe || 0, false)}
+                                ${createComparisonRow('EPS', data1.quote.eps ? '$' + data1.quote.eps.toFixed(2) : '--', data2.quote.eps ? '$' + data2.quote.eps.toFixed(2) : '--', data1.quote.eps || 0, data2.quote.eps || 0, true)}
+                                ${createComparisonRow('Day High', '$' + (data1.quote.dayHigh?.toFixed(2) || '--'), '$' + (data2.quote.dayHigh?.toFixed(2) || '--'), data1.quote.dayHigh || 0, data2.quote.dayHigh || 0, true)}
+                                ${createComparisonRow('Day Low', '$' + (data1.quote.dayLow?.toFixed(2) || '--'), '$' + (data2.quote.dayLow?.toFixed(2) || '--'), data1.quote.dayLow || 0, data2.quote.dayLow || 0, false)}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('resultsContainer').innerHTML = html;
+            document.getElementById('resultsContainer').classList.remove('hidden');
+        }
+
+        function createComparisonCard(data, isPositive) {
+            return `
+                <div class="card rounded-lg p-6">
+                    <h3 class="text-xl font-bold mb-2">${data.profile.companyName || data.ticker}</h3>
+                    <div class="text-sm text-gray-500 mb-4">${data.ticker}</div>
+                    <div class="text-4xl font-bold mb-2">$${data.quote.price.toFixed(2)}</div>
+                    <div class="text-xl ${isPositive ? 'text-green-500' : 'text-red-500'} mb-4">
+                        ${isPositive ? '+' : ''}${data.quote.change.toFixed(2)} (${data.quote.changesPercentage.toFixed(2)}%)
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                            <div class="text-gray-500">Market Cap</div>
+                            <div class="font-bold">${formatNumber(data.quote.marketCap)}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500">P/E Ratio</div>
+                            <div class="font-bold">${data.quote.pe ? data.quote.pe.toFixed(2) : '--'}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500">Volume</div>
+                            <div class="font-bold">${formatNumber(data.quote.volume)}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500">EPS</div>
+                            <div class="font-bold">${data.quote.eps ? '$' + data.quote.eps.toFixed(2) : '--'}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createComparisonRow(label, val1, val2, num1, num2, higherIsBetter) {
+            const winner = num1 === num2 ? '' : (higherIsBetter ? (num1 > num2 ? 'val1' : 'val2') : (num1 < num2 ? 'val1' : 'val2'));
+            return `
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <td class="py-3 text-gray-600">${label}</td>
+                    <td class="py-3 text-right ${winner === 'val1' ? 'font-bold text-green-500' : ''}">${val1}</td>
+                    <td class="py-3 text-right ${winner === 'val2' ? 'font-bold text-green-500' : ''}">${val2}</td>
+                </tr>
+            `;
+        }
+
+        function exitComparison() {
+            comparisonMode = false;
+            const firstTicker = comparisonStocks[0];
+            comparisonStocks = [];
+            searchStock(firstTicker);
         }
 
         // Render Chart
