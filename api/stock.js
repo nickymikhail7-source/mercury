@@ -70,6 +70,14 @@ export default async function handler(req, res) {
             const response = await fetch(quoteUrl);
             const quoteData = await response.json();
 
+            console.log('FMP Response status:', response.status);
+            console.log('FMP Response data:', JSON.stringify(quoteData).substring(0, 200));
+
+            // Check for FMP API errors
+            if (quoteData['Error Message']) {
+                return res.status(400).json({ error: quoteData['Error Message'] });
+            }
+
             if (!response.ok || !quoteData || quoteData.length === 0) {
                 return res.status(404).json({ error: 'Stock not found' });
             }
