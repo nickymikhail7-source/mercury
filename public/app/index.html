@@ -77,6 +77,98 @@
             animation: fadeIn 0.4s ease-out;
         }
 
+        /* Dashboard Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            padding-bottom: 2rem;
+        }
+
+        @media (min-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 2fr 1fr;
+                grid-template-rows: auto auto;
+            }
+
+            .dashboard-header {
+                grid-column: 1 / -1;
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 1rem;
+            }
+
+            .dashboard-main {
+                grid-column: 1 / 2;
+            }
+
+            .dashboard-sidebar {
+                grid-column: 2 / 3;
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+                max-height: calc(100vh - 200px);
+                overflow-y: auto;
+            }
+        }
+
+        /* Compact MercuryScore */
+        .mercury-score-compact {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+        }
+
+        .score-reasoning-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            width: 250px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s;
+            z-index: 50;
+            pointer-events: none;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .breakdown-item:hover .score-reasoning-tooltip {
+            opacity: 1;
+            visibility: visible;
+            bottom: 110%;
+        }
+
+        /* Scrollable AI Analysis */
+        .ai-analysis-scroll {
+            max-height: 400px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+
+        /* Mini Metrics Grid */
+        .mini-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+
+        .mini-metric-card {
+            background: rgba(243, 244, 246, 0.5);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+        }
+
+        .dark .mini-metric-card {
+            background: rgba(31, 41, 55, 0.5);
+        }
+
         .loading-bar {
             position: fixed;
             top: 0;
@@ -724,84 +816,93 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
             }
 
             const html = `
-                <div class="fade-in">
-                    <!-- AI Verdict Card -->
-                    <div class="card rounded-lg p-6 mb-6 text-center">
-                        <div class="inline-block ${verdictClass} px-6 py-3 rounded-full text-2xl font-bold mb-4">
-                            ${verdict}
+                <div class="fade-in dashboard-grid">
+                    <!-- Header Section (Ticker, Price, MercuryScore) -->
+                    <div class="dashboard-header">
+                        <!-- Price Card -->
+                        <div class="card rounded-lg p-4 flex items-center justify-between">
+                            <div>
+                                <h2 class="text-2xl font-bold">${data.profile.companyName || data.ticker}</h2>
+                                <div class="text-sm text-gray-500">${data.quote.symbol}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-3xl font-bold">$${data.quote.price.toFixed(2)}</div>
+                                <div class="text-lg ${priceChange ? 'text-green-500' : 'text-red-500'}">
+                                    ${priceChange ? '+' : ''}${data.quote.change.toFixed(2)} (${data.quote.changesPercentage.toFixed(2)}%)
+                                </div>
+                            </div>
                         </div>
-                        <h2 class="text-3xl font-bold mb-2">${data.profile.companyName || data.ticker}</h2>
-                        <div class="text-5xl font-bold mb-2">$${data.quote.price.toFixed(2)}</div>
-                        <div class="text-2xl ${priceChange ? 'text-green-500' : 'text-red-500'}">
-                            ${priceChange ? '+' : ''}${data.quote.change.toFixed(2)} (${data.quote.changesPercentage.toFixed(2)}%)
-                        </div>
-                        <div class="text-sm text-gray-500 mt-2">${data.quote.symbol}</div>
-                        ${!comparisonMode ? `<button onclick="startComparison('${data.ticker}')" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-sm">
-                            Compare with Another Stock
-                        </button>` : ''}
-                    </div>
 
-                    <!-- Extended Metrics Grid -->
-                   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div class="card rounded-lg p-4">
-                            <div class="text-sm text-gray-500 mb-1">Volume</div>
-                            <div class="text-xl font-bold">${formatNumber(data.quote.volume)}</div>
+                        <!-- MercuryScore Container (Compact) -->
+                        <div id="mercuryScoreContainer" class="card rounded-lg p-0 overflow-hidden">
+                            <!-- Will be populated by displayMercuryScore -->
                         </div>
+
+                        <!-- Key Metrics (Mini Grid) -->
                         <div class="card rounded-lg p-4">
-                            <div class="text-sm text-gray-500 mb-1">Market Cap</div>
-                            <div class="text-xl font-bold">${formatNumber(data.quote.marketCap)}</div>
-                        </div>
-                        <div class="card rounded-lg p-4">
-                            <div class="text-sm text-gray-500 mb-1">P/E Ratio</div>
-                            <div class="text-xl font-bold">${data.quote.pe ? data.quote.pe.toFixed(2) : '--'}</div>
-                        </div>
-                        <div class="card rounded-lg p-4">
-                            <div class="text-sm text-gray-500 mb-1">EPS</div>
-                            <div class="text-xl font-bold">${data.quote.eps ? '$' + data.quote.eps.toFixed(2) : '--'}</div>
-                        </div>
-                        <div class="card rounded-lg p-4">
-                            <div class="text-sm text-gray-500 mb-1">Day High</div>
-                            <div class="text-xl font-bold">$${data.quote.dayHigh?.toFixed(2) || '--'}</div>
-                        </div>
-                        <div class="card rounded-lg p-4">
-                            <div class="text-sm text-gray-500 mb-1">Day Low</div>
-                            <div class="text-xl font-bold">$${data.quote.dayLow?.toFixed(2) || '--'}</div>
-                        </div>
-                        <div class="card rounded-lg p-4">
-                            <div class="text-sm text-gray-500 mb-1">52W High</div>
-                            <div class="text-xl font-bold">${data.quote.fiftyTwoWeekHigh ? '$' + data.quote.fiftyTwoWeekHigh.toFixed(2) : '--'}</div>
-                        </div>
-                        <div class="card rounded-lg p-4">
-                            <div class="text-sm text-gray-500 mb-1">52W Low</div>
-                            <div class="text-xl font-bold">${data.quote.fiftyTwoWeekLow ? '$' + data.quote.fiftyTwoWeekLow.toFixed(2) : '--'}</div>
+                            <div class="mini-metrics-grid">
+                                <div class="mini-metric-card">
+                                    <div class="text-xs text-gray-500">Market Cap</div>
+                                    <div class="font-bold text-sm">${formatNumber(data.quote.marketCap)}</div>
+                                </div>
+                                <div class="mini-metric-card">
+                                    <div class="text-xs text-gray-500">P/E Ratio</div>
+                                    <div class="font-bold text-sm">${data.quote.pe ? data.quote.pe.toFixed(2) : '--'}</div>
+                                </div>
+                                <div class="mini-metric-card">
+                                    <div class="text-xs text-gray-500">Volume</div>
+                                    <div class="font-bold text-sm">${formatNumber(data.quote.volume)}</div>
+                                </div>
+                                <div class="mini-metric-card">
+                                    <div class="text-xs text-gray-500">EPS</div>
+                                    <div class="font-bold text-sm">${data.quote.eps ? '$' + data.quote.eps.toFixed(2) : '--'}</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Chart -->
-                    <div class="card rounded-lg p-6 mb-6">
-                        <h3 class="text-lg font-bold mb-4">Price History (30 Days)</h3>
-                        <canvas id="priceChart"></canvas>
-                    </div>
-
-                    <!-- News Headlines -->
-                    ${data.news && data.news.length > 0 ? `
-                    <div class="card rounded-lg p-6 mb-6">
-                        <h3 class="text-lg font-bold mb-4">Recent News</h3>
-                        <div class="space-y-3">
-                            ${data.news.map(item => `
-                                <a href="${item.link}" target="_blank" class="block p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                                    <div class="font-medium text-blue-500 hover:text-blue-600">${item.title}</div>
-                                    ${item.pubDate ? `<div class="text-xs text-gray-500 mt-1">${new Date(item.pubDate).toLocaleDateString()}</div>` : ''}
-                                </a>
-                            `).join('')}
+                    <!-- Main Content (Chart) -->
+                    <div class="dashboard-main">
+                        <div class="card rounded-lg p-6 h-full">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-bold">Price History (30 Days)</h3>
+                                ${!comparisonMode ? `<button onclick="startComparison('${data.ticker}')" class="bg-blue-100 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-200 text-sm font-medium transition">
+                                    Compare
+                                </button>` : ''}
+                            </div>
+                            <div style="height: 300px;">
+                                <canvas id="priceChart"></canvas>
+                            </div>
                         </div>
                     </div>
-                    ` : ''}
 
-                    <!-- AI Analysis -->
-                    <div class="card rounded-lg p-6">
-                        <h3 class="text-lg font-bold mb-4">AI Analysis</h3>
-                        <div class="prose max-w-none">${data.aiAnalysis.replace(/\n/g, '<br>')}</div>
+                    <!-- Sidebar (AI Analysis & News) -->
+                    <div class="dashboard-sidebar">
+                        <!-- AI Analysis -->
+                        <div class="card rounded-lg p-6 flex-1">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg font-bold">AI Analysis</h3>
+                                <span class="${verdictClass} px-3 py-1 rounded-full text-xs font-bold">${verdict}</span>
+                            </div>
+                            <div class="prose max-w-none text-sm ai-analysis-scroll pr-2">
+                                ${data.aiAnalysis.replace(/\n/g, '<br>')}
+                            </div>
+                        </div>
+
+                        <!-- Recent News (Compact) -->
+                        ${data.news && data.news.length > 0 ? `
+                        <div class="card rounded-lg p-4">
+                            <h3 class="text-sm font-bold mb-3 text-gray-500 uppercase">Latest News</h3>
+                            <div class="space-y-2">
+                                ${data.news.slice(0, 3).map(item => `
+                                    <a href="${item.link}" target="_blank" class="block p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                        <div class="text-sm font-medium text-blue-500 hover:text-blue-600 line-clamp-2">${item.title}</div>
+                                        <div class="text-xs text-gray-400 mt-1">${item.pubDate ? new Date(item.pubDate).toLocaleDateString() : ''}</div>
+                                    </a>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -1083,9 +1184,8 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
         function calculateTechnicalScore(historicalData) {
             try {
                 const prices = historicalData.map(h => h.close);
-                const volumes = historicalData.map(h => h.volume || 0);
-
                 let technicalScore = 0;
+                let reasons = [];
 
                 // RSI Score (0-1 point)
                 const rsi = calculateRSI(prices);
@@ -1093,20 +1193,29 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
                     // Optimal RSI is 50, penalize extremes
                     const rsiScore = Math.max(0, (70 - Math.abs(rsi - 50)) / 70);
                     technicalScore += rsiScore;
+
+                    if (rsi > 70) reasons.push(`RSI is Overbought (${rsi.toFixed(0)})`);
+                    else if (rsi < 30) reasons.push(`RSI is Oversold (${rsi.toFixed(0)})`);
+                    else reasons.push(`RSI is Neutral (${rsi.toFixed(0)})`);
                 }
 
                 // MACD Score (0-1 point)
                 const macdScore = calculateMACDScore(prices);
                 technicalScore += macdScore;
+                reasons.push(macdScore > 0.5 ? "Bullish MACD Trend" : "Bearish MACD Trend");
 
                 // Moving Average Score (0-1 point)
-                const maScore = calculateMAScore(prices);
-                technicalScore += maScore;
+                const maResult = calculateMAScore(prices);
+                technicalScore += maResult.score;
+                reasons.push(maResult.reason);
 
-                return Math.min(technicalScore, 3.0);
+                return {
+                    score: Math.min(technicalScore, 3.0),
+                    reasoning: reasons.join('. ')
+                };
             } catch (error) {
                 console.error('Technical score error:', error);
-                return 1.5; // Fallback to neutral
+                return { score: 1.5, reasoning: "Technical data unavailable" };
             }
         }
 
@@ -1144,58 +1253,72 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
 
         // Calculate Moving Average Score
         function calculateMAScore(prices) {
-            if (prices.length < 50) return 0.5; // Insufficient data
+            if (prices.length < 50) return { score: 0.5, reason: "Insufficient price history" };
 
             const currentPrice = prices[prices.length - 1];
             const ma50 = calculateSMA(prices, 50);
             const ma200 = prices.length >= 200 ? calculateSMA(prices, 200) : null;
 
-            if (!ma50) return 0.5;
+            if (!ma50) return { score: 0.5, reason: "Insufficient data" };
 
             // Golden cross: Price > MA50 AND MA50 > MA200
-            if (ma200 && currentPrice > ma50 && ma50 > ma200) return 1.0;
+            if (ma200 && currentPrice > ma50 && ma50 > ma200) return { score: 1.0, reason: "Golden Cross (Bullish Trend)" };
             // Price above 50-day MA
-            if (currentPrice > ma50) return 0.7;
+            if (currentPrice > ma50) return { score: 0.7, reason: "Price above 50-day MA" };
             // Death cross
-            return 0.2;
+            return { score: 0.2, reason: "Price below 50-day MA (Bearish)" };
         }
 
         // 2. Fundamental Score (0-3 points)
         function calculateFundamentalScore(quoteData) {
             try {
                 let fundamentalScore = 0;
+                let reasons = [];
 
                 // P/E Ratio Score (0-1 point)
                 if (quoteData.pe && quoteData.pe > 0) {
                     // Optimal P/E ~ 15, penalize extremes
                     const peScore = Math.max(0, 1.0 - Math.min(Math.abs(quoteData.pe - 15) / 30, 1.0));
                     fundamentalScore += peScore;
+
+                    if (quoteData.pe > 45) reasons.push(`High P/E Ratio (${quoteData.pe.toFixed(1)})`);
+                    else if (quoteData.pe < 5) reasons.push(`Low P/E Ratio (${quoteData.pe.toFixed(1)})`);
+                    else reasons.push(`Healthy P/E Ratio (${quoteData.pe.toFixed(1)})`);
                 } else {
                     fundamentalScore += 0.5; // Neutral if no P/E
+                    reasons.push("P/E Ratio unavailable");
                 }
 
                 // Market Cap Score (0-1 point) - Proxy for stability
                 const marketCap = quoteData.marketCap || 0;
                 if (marketCap > 200e9) {
                     fundamentalScore += 0.9; // Large cap
+                    reasons.push("Large Cap Stock (High Stability)");
                 } else if (marketCap > 10e9) {
                     fundamentalScore += 0.7; // Mid cap
+                    reasons.push("Mid Cap Stock");
                 } else {
                     fundamentalScore += 0.5; // Small cap
+                    reasons.push("Small Cap Stock (Higher Volatility)");
                 }
 
                 // EPS Score (0-1 point)
                 if (quoteData.eps && quoteData.eps > 0) {
                     // Positive EPS is good, scale up to $10
                     fundamentalScore += Math.min(quoteData.eps / 10, 1.0);
+                    reasons.push(`Positive EPS ($${quoteData.eps.toFixed(2)})`);
                 } else {
                     fundamentalScore += 0.3; // Low score for negative/missing EPS
+                    reasons.push("Negative or Missing EPS");
                 }
 
-                return Math.min(fundamentalScore, 3.0);
+                return {
+                    score: Math.min(fundamentalScore, 3.0),
+                    reasoning: reasons.join('. ')
+                };
             } catch (error) {
                 console.error('Fundamental score error:', error);
-                return 1.5; // Fallback
+                return { score: 1.5, reasoning: "Fundamental data unavailable" };
             }
         }
 
@@ -1203,6 +1326,7 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
         function calculateSentimentScore(historicalData, quoteData) {
             try {
                 let sentimentScore = 0;
+                let reasons = [];
                 const prices = historicalData.map(h => h.close);
 
                 // Volume Trend (0-1 point)
@@ -1212,13 +1336,17 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
 
                     if (currentVolume > avgVolume * 1.2) {
                         sentimentScore += 1.0; // High interest
+                        reasons.push(`High Volume Interest (${formatNumber(currentVolume)})`);
                     } else if (currentVolume > avgVolume * 0.8) {
                         sentimentScore += 0.6; // Normal
+                        reasons.push("Normal Trading Volume");
                     } else {
                         sentimentScore += 0.3; // Low interest
+                        reasons.push("Low Trading Volume");
                     }
                 } else {
                     sentimentScore += 0.5;
+                    reasons.push("Insufficient volume data");
                 }
 
                 // Price Momentum (0-1 point) - 7-day change
@@ -1230,21 +1358,29 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
                     // Scale: -10% = 0, 0% = 0.5, +10% = 1.0
                     const momentumScore = Math.max(0, Math.min((change7d + 10) / 20, 1.0));
                     sentimentScore += momentumScore;
+
+                    if (change7d > 5) reasons.push(`Strong Weekly Momentum (+${change7d.toFixed(1)}%)`);
+                    else if (change7d < -5) reasons.push(`Weak Weekly Momentum (${change7d.toFixed(1)}%)`);
+                    else reasons.push(`Stable Weekly Price (${change7d.toFixed(1)}%)`);
                 } else {
                     sentimentScore += 0.5;
+                    reasons.push("Insufficient price history");
                 }
 
-                return Math.min(sentimentScore, 2.0);
+                return {
+                    score: Math.min(sentimentScore, 2.0),
+                    reasoning: reasons.join('. ')
+                };
             } catch (error) {
                 console.error('Sentiment score error:', error);
-                return 1.0; // Fallback
+                return { score: 1.0, reasoning: "Sentiment data unavailable" };
             }
         }
 
         // 4. News Sentiment Score (0-2 points)
         function calculateNewsScore(newsData) {
             try {
-                if (!newsData || newsData.length === 0) return 1.0; // Neutral if no news
+                if (!newsData || newsData.length === 0) return { score: 1.0, reasoning: "No recent news found" };
 
                 const positiveKeywords = ['growth', 'profit', 'beats', 'record', 'surge', 'up', 'gain', 'rise', 'boost', 'strong'];
                 const negativeKeywords = ['loss', 'decline', 'misses', 'warning', 'falls', 'down', 'weak', 'drop', 'cut', 'concern'];
@@ -1266,10 +1402,18 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
 
                 // Scale: -5 to +5 → 0 to 2.0
                 const newsScore = ((positiveCount - negativeCount + 5) / 10) * 2.0;
-                return Math.max(0, Math.min(newsScore, 2.0));
+
+                let reasoning = "Neutral News Sentiment";
+                if (positiveCount > negativeCount) reasoning = `Positive News Sentiment (${positiveCount} positive keywords)`;
+                else if (negativeCount > positiveCount) reasoning = `Negative News Sentiment (${negativeCount} negative keywords)`;
+
+                return {
+                    score: Math.max(0, Math.min(newsScore, 2.0)),
+                    reasoning: reasoning
+                };
             } catch (error) {
                 console.error('News score error:', error);
-                return 1.0; // Fallback
+                return { score: 1.0, reasoning: "News analysis unavailable" };
             }
         }
 
@@ -1288,21 +1432,28 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
                 }
 
                 // Calculate component scores
+                // Note: These functions now return objects { score, reasoning }
                 const technical = calculateTechnicalScore(data.history || []);
                 const fundamentals = calculateFundamentalScore(data.quote);
                 const sentiment = calculateSentimentScore(data.history || [], data.quote);
                 const news = calculateNewsScore(newsData);
 
-                const totalScore = technical + fundamentals + sentiment + news;
+                const totalScore = technical.score + fundamentals.score + sentiment.score + news.score;
                 const roundedScore = Math.round(totalScore * 10) / 10;
 
                 return {
                     score: roundedScore,
                     breakdown: {
-                        technical: Math.round(technical * 10) / 10,
-                        fundamentals: Math.round(fundamentals * 10) / 10,
-                        sentiment: Math.round(sentiment * 10) / 10,
-                        news: Math.round(news * 10) / 10
+                        technical: Math.round(technical.score * 10) / 10,
+                        fundamentals: Math.round(fundamentals.score * 10) / 10,
+                        sentiment: Math.round(sentiment.score * 10) / 10,
+                        news: Math.round(news.score * 10) / 10
+                    },
+                    reasoning: {
+                        technical: technical.reasoning,
+                        fundamentals: fundamentals.reasoning,
+                        sentiment: sentiment.reasoning,
+                        news: news.reasoning
                     },
                     recommendation: getRecommendation(roundedScore),
                     color: getScoreColor(roundedScore)
@@ -1312,6 +1463,12 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
                 return {
                     score: 5.0,
                     breakdown: { technical: 1.5, fundamentals: 1.5, sentiment: 1.0, news: 1.0 },
+                    reasoning: {
+                        technical: "Data unavailable",
+                        fundamentals: "Data unavailable",
+                        sentiment: "Data unavailable",
+                        news: "Data unavailable"
+                    },
                     recommendation: 'Hold',
                     color: '#f59e0b'
                 };
@@ -1334,80 +1491,46 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
             return '#ef4444'; // Red
         }
 
-        // Display MercuryScore Component
+        // Display MercuryScore Component (Compact Version)
         function displayMercuryScore(scoreData) {
             let container = document.getElementById('mercuryScoreContainer');
-            if (!container) {
-                // Create the container if it doesn't exist
-                const resultsContainer = document.getElementById('resultsContainer');
-                container = document.createElement('div');
-                container.id = 'mercuryScoreContainer';
-                resultsContainer.insertBefore(container, resultsContainer.firstChild);
-            }
+            if (!container) return; // Should be created by displayResults
 
-            const { score, breakdown, recommendation, color } = scoreData;
+            const { score, breakdown, reasoning, recommendation, color } = scoreData;
 
             // Calculate progress (0-10 scale to 0-100%)
             const progressPercent = (score / 10) * 100;
-            const circumference = 314; // 2 * π * radius (50)
+            const circumference = 2 * Math.PI * 45; // r=45
             const offset = circumference - (progressPercent / 100) * circumference;
 
             const html = `
-                <div class="mercury-score-card">
-                    <div class="score-container">
-                        <div class="score-display">
-                            <svg class="circular-progress" viewBox="0 0 120 120">
-                                <circle class="bg-circle" cx="60" cy="60" r="50"></circle>
-                                <circle class="progress-circle" cx="60" cy="60" r="50" 
-                                        style="stroke: ${color}; stroke-dashoffset: ${offset};"></circle>
+                <div class="mercury-score-compact bg-gradient-to-r from-gray-900 to-gray-800 text-white">
+                    <!-- Left: Score Circle & Recommendation -->
+                    <div class="flex items-center gap-4">
+                        <div class="relative w-16 h-16 flex-shrink-0">
+                            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="45" fill="none" stroke="#374151" stroke-width="8" />
+                                <circle cx="50" cy="50" r="45" fill="none" stroke="${color}" stroke-width="8"
+                                    stroke-dasharray="${circumference}" stroke-dashoffset="${circumference}"
+                                    class="transition-all duration-1000 ease-out"
+                                    style="stroke-dashoffset: ${offset}" />
                             </svg>
-                            <div class="score-number" id="scoreNumber">0.0</div>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span class="text-xl font-bold score-number" data-target="${score}">0.0</span>
+                            </div>
                         </div>
-                        <div class="score-info">
-                            <div class="score-title">MercuryScore™</div>
-                            <div class="score-recommendation">${recommendation}</div>
-                            <button class="expand-btn" onclick="toggleScoreBreakdown()">
-                                <span id="expandText">Show Breakdown ▼</span>
-                            </button>
+                        <div>
+                            <div class="text-xs text-gray-400 uppercase tracking-wider">MercuryScore</div>
+                            <div class="text-lg font-bold" style="color: ${color}">${recommendation}</div>
                         </div>
                     </div>
-                    <div class="score-breakdown hidden" id="scoreBreakdown">
-                        <div class="breakdown-item">
-                            <div class="breakdown-label">
-                                <span>Technical Indicators</span>
-                                <span>${breakdown.technical}/3.0</span>
-                            </div>
-                            <div class="breakdown-bar">
-                                <div class="breakdown-fill" data-width="${(breakdown.technical / 3) * 100}"></div>
-                            </div>
-                        </div>
-                        <div class="breakdown-item">
-                            <div class="breakdown-label">
-                                <span>Fundamentals</span>
-                                <span>${breakdown.fundamentals}/3.0</span>
-                            </div>
-                            <div class="breakdown-bar">
-                                <div class="breakdown-fill" data-width="${(breakdown.fundamentals / 3) * 100}"></div>
-                            </div>
-                        </div>
-                        <div class="breakdown-item">
-                            <div class="breakdown-label">
-                                <span>Market Sentiment</span>
-                                <span>${breakdown.sentiment}/2.0</span>
-                            </div>
-                            <div class="breakdown-bar">
-                                <div class="breakdown-fill" data-width="${(breakdown.sentiment / 2) * 100}"></div>
-                            </div>
-                        </div>
-                        <div class="breakdown-item">
-                            <div class="breakdown-label">
-                                <span>News Sentiment</span>
-                                <span>${breakdown.news}/2.0</span>
-                            </div>
-                            <div class="breakdown-bar">
-                                <div class="breakdown-fill" data-width="${(breakdown.news / 2) * 100}"></div>
-                            </div>
-                        </div>
+
+                    <!-- Right: Compact Breakdown with Tooltips -->
+                    <div class="flex gap-2 ml-4 flex-1 justify-end">
+                        ${createCompactBreakdownItem('Tech', breakdown.technical, 3.0, reasoning?.technical)}
+                        ${createCompactBreakdownItem('Fund', breakdown.fundamentals, 3.0, reasoning?.fundamentals)}
+                        ${createCompactBreakdownItem('Sent', breakdown.sentiment, 2.0, reasoning?.sentiment)}
+                        ${createCompactBreakdownItem('News', breakdown.news, 2.0, reasoning?.news)}
                     </div>
                 </div>
             `;
@@ -1418,59 +1541,54 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
             animateScoreNumber(score);
         }
 
+        function createCompactBreakdownItem(label, value, max, reasoning) {
+            const percent = (value / max) * 100;
+            const colorClass = percent > 66 ? 'bg-green-500' : percent > 33 ? 'bg-yellow-500' : 'bg-red-500';
+
+            return `
+                <div class="breakdown-item relative group cursor-help">
+                    <div class="flex flex-col items-center w-12">
+                        <div class="h-12 w-2 bg-gray-700 rounded-full overflow-hidden relative">
+                            <div class="absolute bottom-0 left-0 w-full ${colorClass} transition-all duration-1000" style="height: ${percent}%"></div>
+                        </div>
+                        <div class="text-[10px] text-gray-400 mt-1">${label}</div>
+                    </div>
+                    
+                    <!-- Reasoning Tooltip -->
+                    <div class="score-reasoning-tooltip">
+                        <div class="font-bold mb-1 text-white">${label}: ${value}/${max}</div>
+                        <div class="text-gray-300 text-xs leading-relaxed">${reasoning || 'No data available'}</div>
+                    </div>
+                </div>
+            `;
+        }
+
         // Animate the score number counting up
         function animateScoreNumber(targetScore, duration = 2000) {
-            const scoreElement = document.getElementById('scoreNumber');
+            const scoreElement = document.querySelector('.score-number');
             if (!scoreElement) return;
 
+            const startScore = 0;
             const startTime = performance.now();
 
             function updateScore(currentTime) {
                 const elapsed = currentTime - startTime;
                 const progress = Math.min(elapsed / duration, 1);
 
-                // Easing function (ease-out cubic)
-                const eased = 1 - Math.pow(1 - progress, 3);
-                const currentScore = eased * targetScore;
+                // Ease out cubic
+                const easeOut = 1 - Math.pow(1 - progress, 3);
 
-                scoreElement.textContent = currentScore.toFixed(1);
+                const currentScore = (startScore + (targetScore - startScore) * easeOut).toFixed(1);
+                scoreElement.textContent = currentScore;
 
                 if (progress < 1) {
                     requestAnimationFrame(updateScore);
                 } else {
                     scoreElement.textContent = targetScore.toFixed(1);
-                    // Animate breakdown bars after score animation
-                    animateBreakdownBars();
                 }
             }
 
             requestAnimationFrame(updateScore);
-        }
-
-        // Animate breakdown bars
-        function animateBreakdownBars() {
-            const fills = document.querySelectorAll('.breakdown-fill');
-            setTimeout(() => {
-                fills.forEach(fill => {
-                    const width = fill.getAttribute('data-width');
-                    fill.style.width = width + '%';
-                });
-            }, 100);
-        }
-
-        // Toggle score breakdown visibility
-        function toggleScoreBreakdown() {
-            const breakdown = document.getElementById('scoreBreakdown');
-            const expandText = document.getElementById('expandText');
-
-            if (breakdown.classList.contains('hidden')) {
-                breakdown.classList.remove('hidden');
-                expandText.textContent = 'Hide Breakdown ▲';
-                animateBreakdownBars();
-            } else {
-                breakdown.classList.add('hidden');
-                expandText.textContent = 'Show Breakdown ▼';
-            }
         }
 
         // Utilities
