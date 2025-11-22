@@ -567,15 +567,15 @@ SETUP INSTRUCTIONS:
 
             try {
                 // Fetch Quote
-                const quoteRes = await fetch(`https://financialmodelingprep.com/api/v3/quote/${ticker}?apikey=${FMP_API_KEY}`);
+                const quoteRes = await fetch(`/api/stock?type=quote&ticker=${ticker}&apiKey=${FMP_API_KEY}`);
                 const quoteData = await quoteRes.json();
 
                 // Fetch Profile (for description)
-                const profileRes = await fetch(`https://financialmodelingprep.com/api/v3/profile/${ticker}?apikey=${FMP_API_KEY}`);
+                const profileRes = await fetch(`/api/stock?type=profile&ticker=${ticker}&apiKey=${FMP_API_KEY}`);
                 const profileData = await profileRes.json();
 
                 // Fetch Historical (for chart)
-                const historyRes = await fetch(`https://financialmodelingprep.com/api/v3/historical-price-full/${ticker}?timeseries=30&apikey=${FMP_API_KEY}`);
+                const historyRes = await fetch(`/api/stock?type=history&ticker=${ticker}&apiKey=${FMP_API_KEY}`);
                 const historyData = await historyRes.json();
 
                 if (!quoteData || quoteData.length === 0) throw new Error('Stock not found');
