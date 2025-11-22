@@ -267,12 +267,6 @@
             const ticker = document.getElementById('stockInput').value.toUpperCase().trim();
             if (!ticker) return;
 
-            if (!FMP_API_KEY) {
-                alert('Please enter your FMP API Key in settings first.');
-                openSettings();
-                return;
-            }
-
             // UI State: Loading
             document.getElementById('searchSection').classList.add('hidden');
             document.getElementById('loadingState').classList.remove('hidden');
