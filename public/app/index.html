@@ -88,7 +88,8 @@
         @media (min-width: 1024px) {
             .dashboard-grid {
                 grid-template-columns: 2fr 1fr;
-                grid-template-rows: auto auto;
+                grid-template-rows: auto auto auto;
+                /* Added row for portfolio */
             }
 
             .dashboard-header {
@@ -96,6 +97,11 @@
                 display: grid;
                 grid-template-columns: 1fr 1fr 1fr;
                 gap: 1rem;
+            }
+
+            /* Portfolio Section spans full width below header */
+            .portfolio-section {
+                grid-column: 1 / -1;
             }
 
             .dashboard-main {
@@ -110,6 +116,120 @@
                 max-height: calc(100vh - 200px);
                 overflow-y: auto;
             }
+        }
+
+        /* Portfolio Cards */
+        .portfolio-grid {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr);
+            gap: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .portfolio-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        /* Floating Action Button (FAB) */
+        .fab-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 50;
+        }
+
+        .fab-main {
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            background: #3b82f6;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .fab-main:hover {
+            transform: scale(1.1);
+        }
+
+        .fab-menu {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 200px;
+            height: 200px;
+            pointer-events: none;
+        }
+
+        .fab-item {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: white;
+            color: #1f2937;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            white-space: nowrap;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .dark .fab-item {
+            background: #374151;
+            color: white;
+        }
+
+        .fab-container.active .fab-main {
+            transform: rotate(45deg);
+            background: #ef4444;
+        }
+
+        .fab-container.active .fab-item {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
         }
 
         /* Compact MercuryScore */
@@ -861,14 +981,52 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
                         </div>
                     </div>
 
+                    <!-- Portfolio Section -->
+                    <div class="portfolio-section">
+                        <div class="card rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <h3 class="text-sm font-bold text-gray-500 uppercase">For Your Portfolio</h3>
+                                <button class="text-xs text-blue-500 hover:text-blue-600 font-medium">Connect Portfolio</button>
+                            </div>
+                            <div class="portfolio-grid">
+                                <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="text-lg">📊</span>
+                                        <span class="font-bold text-sm text-blue-800 dark:text-blue-300">Portfolio Impact</span>
+                                    </div>
+                                    <p class="text-xs text-blue-600 dark:text-blue-400">Adding $1000 of ${data.ticker} would increase tech exposure to 45%</p>
+                                </div>
+                                <div class="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-100 dark:border-yellow-800">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="text-lg">⚠️</span>
+                                        <span class="font-bold text-sm text-yellow-800 dark:text-yellow-300">Risk Alert</span>
+                                    </div>
+                                    <p class="text-xs text-yellow-600 dark:text-yellow-400">This stock has 0.8 correlation with your TSLA holding</p>
+                                </div>
+                                <div class="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-100 dark:border-green-800">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="text-lg">🎯</span>
+                                        <span class="font-bold text-sm text-green-800 dark:text-green-300">Better Entry</span>
+                                    </div>
+                                    <p class="text-xs text-green-600 dark:text-green-400">Consider buying at $${(data.quote.price * 0.95).toFixed(2)} (support level)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Main Content (Chart) -->
                     <div class="dashboard-main">
                         <div class="card rounded-lg p-6 h-full">
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="text-lg font-bold">Price History (30 Days)</h3>
-                                ${!comparisonMode ? `<button onclick="startComparison('${data.ticker}')" class="bg-blue-100 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-200 text-sm font-medium transition">
-                                    Compare
-                                </button>` : ''}
+                                <div class="flex gap-2">
+                                    <button onclick="openBuyModal('${data.ticker}', ${data.quote.price})" class="bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600 text-sm font-medium transition shadow-sm">
+                                        Should I Buy?
+                                    </button>
+                                    ${!comparisonMode ? `<button onclick="startComparison('${data.ticker}')" class="bg-blue-100 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-200 text-sm font-medium transition">
+                                        Compare
+                                    </button>` : ''}
+                                </div>
                             </div>
                             <div style="height: 300px;">
                                 <canvas id="priceChart"></canvas>
@@ -1604,6 +1762,127 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
             if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
             if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
             return num.toString();
+        }
+        // ============================================
+        // INTERACTIVE FEATURES (FAB & MODAL)
+        // ============================================
+
+        // Initialize Interactive Features
+        document.addEventListener('DOMContentLoaded', () => {
+            createFAB();
+            createBuyModal();
+        });
+
+        // Create Floating Action Button
+        function createFAB() {
+            const fabContainer = document.createElement('div');
+            fabContainer.className = 'fab-container';
+            fabContainer.innerHTML = `
+                <div class="fab-menu">
+                    <div class="fab-item" onclick="showToast('Analyzing Portfolio...')" style="bottom: 140px; right: 10px;">
+                        <span>📊</span> Analyze Portfolio
+                    </div>
+                    <div class="fab-item" onclick="showToast('Finding Opportunities...')" style="bottom: 110px; right: 60px;">
+                        <span>🔍</span> Find Opportunities
+                    </div>
+                    <div class="fab-item" onclick="showToast('Checking Risk...')" style="bottom: 70px; right: 90px;">
+                        <span>⚠️</span> Check Risk
+                    </div>
+                    <div class="fab-item" onclick="showToast('Optimizing Taxes...')" style="bottom: 20px; right: 100px;">
+                        <span>💰</span> Tax Optimize
+                    </div>
+                    <div class="fab-item" onclick="showToast('Ask Mercury AI...')" style="bottom: 160px; right: 0px;">
+                        <span>🤖</span> Ask Mercury
+                    </div>
+                </div>
+                <div class="fab-main" onclick="toggleFAB()">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                </div>
+            `;
+            document.body.appendChild(fabContainer);
+        }
+
+        function toggleFAB() {
+            document.querySelector('.fab-container').classList.toggle('active');
+        }
+
+        // Create Buy Modal
+        function createBuyModal() {
+            const modal = document.createElement('div');
+            modal.id = 'buyModal';
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold" id="modalTicker">AAPL</h3>
+                            <div class="text-sm text-gray-500">Strategic Analysis</div>
+                        </div>
+                        <button onclick="closeBuyModal()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-6">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-bold text-blue-800 dark:text-blue-300">Mercury Score</span>
+                            <span class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="modalScore">8.5</span>
+                        </div>
+                        <p class="text-xs text-blue-600 dark:text-blue-400" id="modalReasoning">Strong technicals and positive sentiment suggest upside potential.</p>
+                    </div>
+
+                    <div class="space-y-4 mb-6">
+                        <div class="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2">
+                            <span class="text-gray-500">Current Price</span>
+                            <span class="font-bold" id="modalPrice">$150.00</span>
+                        </div>
+                        <div class="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2">
+                            <span class="text-gray-500">Fair Value</span>
+                            <span class="font-bold text-green-500" id="modalFairValue">$165.00</span>
+                        </div>
+                        <div class="flex justify-between items-center pb-2">
+                            <span class="text-gray-500">Valuation</span>
+                            <span class="font-bold text-green-500">Undervalued by 10%</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-6">
+                        <div class="font-bold text-sm mb-1">Recommendation</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-300" id="modalRecommendation">
+                            Consider accumulating at current levels. Support is strong at $145.
+                        </div>
+                    </div>
+
+                    <button onclick="showToast('Price Alert Set!')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition transform active:scale-95">
+                        Set Price Alert
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function openBuyModal(ticker, price) {
+            const modal = document.getElementById('buyModal');
+            const scoreElement = document.querySelector('.score-number');
+            const score = scoreElement ? scoreElement.textContent : '0.0';
+
+            document.getElementById('modalTicker').textContent = ticker;
+            document.getElementById('modalPrice').textContent = '$' + price.toFixed(2);
+            document.getElementById('modalScore').textContent = score;
+
+            // Mock Fair Value Logic
+            const fairValue = price * (parseFloat(score) > 7 ? 1.1 : 0.9);
+            document.getElementById('modalFairValue').textContent = '$' + fairValue.toFixed(2);
+
+            modal.classList.add('active');
+        }
+
+        function closeBuyModal() {
+            document.getElementById('buyModal').classList.remove('active');
         }
     </script>
 </body>
