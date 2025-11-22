@@ -1325,13 +1325,13 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
 
         // Display MercuryScore Component
         function displayMercuryScore(scoreData) {
-            const container = document.getElementById('mercuryScoreContainer');
+            let container = document.getElementById('mercuryScoreContainer');
             if (!container) {
                 // Create the container if it doesn't exist
                 const resultsContainer = document.getElementById('resultsContainer');
-                const mercuryContainer = document.createElement('div');
-                mercuryContainer.id = 'mercuryScoreContainer';
-                resultsContainer.insertBefore(mercuryContainer, resultsContainer.firstChild);
+                container = document.createElement('div');
+                container.id = 'mercuryScoreContainer';
+                resultsContainer.insertBefore(container, resultsContainer.firstChild);
             }
 
             const { score, breakdown, recommendation, color } = scoreData;
@@ -1401,7 +1401,7 @@ END YOUR RESPONSE WITH: "Verdict: [BUY/HOLD/WAIT]" on its own line.`;
                 </div>
             `;
 
-            document.getElementById('mercuryScoreContainer').innerHTML = html;
+            container.innerHTML = html;
 
             // Animate score counting up
             animateScoreNumber(score);
