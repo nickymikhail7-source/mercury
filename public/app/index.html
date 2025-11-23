@@ -995,9 +995,9 @@ Use emojis for each section (except Summary). Be conversational but professional
 
                     <!-- Portfolio Section -->
                     <div class="portfolio-section">
-                        <div class="flex justify-between items-center mb-3 px-1">
+                        <div class="flex justify-between items-center mb-3">
                             <h3 class="text-sm font-bold text-gray-500 uppercase">For Your Portfolio</h3>
-                            <button class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-bold hover:bg-blue-200 transition">Connect Portfolio</button>
+                            <button class="bg-blue-100 text-blue-600 px-3 py-1 rounded-lg text-sm font-medium hover:bg-blue-200 transition">Connect Portfolio</button>
                         </div>
                         <div class="portfolio-grid">
                             <div class="card bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800 fade-in h-full" style="animation-delay: 0.1s">
@@ -1846,9 +1846,9 @@ Use emojis for each section (except Summary). Be conversational but professional
             const offset = circumference - (progressPercent / 100) * circumference;
 
             const html = `
-                <div class="mercury-score-compact bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-lg shadow-lg relative transition-all duration-300" id="mercuryScoreCard">
+                <div class="mercury-score-compact bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-lg shadow-lg relative transition-all duration-300 h-full" id="mercuryScoreCard">
                     <!-- Compact View -->
-                    <div class="flex items-center justify-between w-full cursor-pointer" onclick="toggleMercuryDetails()">
+                    <div class="flex items-center justify-between w-full cursor-pointer h-full" onclick="toggleMercuryDetails()">
                         <div class="flex items-center gap-4">
                             <div class="relative w-16 h-16 flex-shrink-0">
                                 <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
@@ -2002,20 +2002,20 @@ Use emojis for each section (except Summary). Be conversational but professional
             const fabContainer = document.createElement('div');
             fabContainer.className = 'fab-container';
             fabContainer.innerHTML = `
-                <div class="fab-menu">
-                    <div class="fab-item" onclick="scrollToSection('portfolio-section')" style="bottom: 140px; right: 10px;">
+                <div class="fab-menu flex flex-col items-end gap-2 mb-4 mr-2">
+                    <div class="fab-item static transform-none opacity-0 translate-y-4 transition-all duration-300" onclick="scrollToSection('portfolio-section')" style="transition-delay: 50ms">
                         <span>📊</span> Analyze Portfolio
                     </div>
-                    <div class="fab-item" onclick="scrollToSection('portfolio-section', 'better-entry')" style="bottom: 110px; right: 60px;">
+                    <div class="fab-item static transform-none opacity-0 translate-y-4 transition-all duration-300" onclick="scrollToSection('portfolio-section', 'better-entry')" style="transition-delay: 100ms">
                         <span>🔍</span> Find Opportunities
                     </div>
-                    <div class="fab-item" onclick="scrollToSection('portfolio-section', 'risk-alert')" style="bottom: 70px; right: 90px;">
+                    <div class="fab-item static transform-none opacity-0 translate-y-4 transition-all duration-300" onclick="scrollToSection('portfolio-section', 'risk-alert')" style="transition-delay: 150ms">
                         <span>⚠️</span> Check Risk
                     </div>
-                    <div class="fab-item" onclick="showToast('Tax Optimization module coming in v2.0')" style="bottom: 20px; right: 100px;">
+                    <div class="fab-item static transform-none opacity-0 translate-y-4 transition-all duration-300" onclick="showToast('Tax Optimization module coming in v2.0')" style="transition-delay: 200ms">
                         <span>💰</span> Tax Optimize
                     </div>
-                    <div class="fab-item" onclick="scrollToSection('dashboard-sidebar')" style="bottom: 160px; right: 0px;">
+                    <div class="fab-item static transform-none opacity-0 translate-y-4 transition-all duration-300" onclick="scrollToSection('dashboard-sidebar')" style="transition-delay: 250ms">
                         <span>🤖</span> Ask Mercury
                     </div>
                 </div>
@@ -2034,9 +2034,6 @@ Use emojis for each section (except Summary). Be conversational but professional
                 element.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
                 if (highlightId) {
-                    // Find the specific card and pulse it
-                    // This assumes we add IDs or specific classes to the cards. 
-                    // For now, we'll just highlight the section.
                     element.classList.add('ring-2', 'ring-blue-500', 'transition-all');
                     setTimeout(() => element.classList.remove('ring-2', 'ring-blue-500'), 2000);
                 }
@@ -2045,7 +2042,19 @@ Use emojis for each section (except Summary). Be conversational but professional
         }
 
         function toggleFAB() {
-            document.querySelector('.fab-container').classList.toggle('active');
+            const container = document.querySelector('.fab-container');
+            container.classList.toggle('active');
+
+            const items = container.querySelectorAll('.fab-item');
+            if (container.classList.contains('active')) {
+                items.forEach(item => {
+                    item.classList.remove('opacity-0', 'translate-y-4');
+                });
+            } else {
+                items.forEach(item => {
+                    item.classList.add('opacity-0', 'translate-y-4');
+                });
+            }
         }
 
         // Multi-Step Buy Modal
@@ -2057,7 +2066,7 @@ Use emojis for each section (except Summary). Be conversational but professional
             modal.id = 'buyModal';
             modal.className = 'modal-overlay';
             modal.innerHTML = `
-                <div class="modal-content bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl relative overflow-hidden">
+            <div class="modal-content bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl relative overflow-hidden">
                     <!-- Header -->
                     <div class="flex justify-between items-start mb-6">
                         <div>
@@ -2140,10 +2149,10 @@ Use emojis for each section (except Summary). Be conversational but professional
                     </div>
 
                     <!-- Navigation -->
-                    <div class="flex justify-between mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <button onclick="prevStep()" class="text-gray-400 hover:text-gray-600 font-medium px-4 py-2 rounded-lg" id="prevBtn" disabled>Back</button>
-                        <button onclick="nextStep()" class="bg-gray-900 dark:bg-gray-700 text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition" id="nextBtn">Next</button>
-                    </div>
+            <div class="flex justify-between mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <button onclick="prevStep()" class="text-gray-400 hover:text-gray-600 font-medium px-4 py-2 rounded-lg" id="prevBtn" disabled>Back</button>
+                <button onclick="nextStep()" class="bg-gray-900 dark:bg-gray-700 text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition" id="nextBtn">Next</button>
+            </div>
                 </div>
             `;
             document.body.appendChild(modal);
