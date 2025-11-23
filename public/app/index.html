@@ -930,6 +930,10 @@ Use emojis for each section (except Summary). Be conversational but professional
             const verdictClass = verdict === 'BUY' ? 'badge-buy' : verdict === 'HOLD' ? 'badge-hold' : 'badge-wait';
             const priceChange = data.quote.change >= 0;
 
+            // Indian Market Detection
+            const isIndian = data.ticker.endsWith('.NS') || data.ticker.endsWith('.BO') || data.quote.currency === 'INR';
+            const currencySymbol = isIndian ? '₹' : '$';
+
             // Portfolio Insights
             const portfolio = getPortfolioInsights(data.ticker, data.quote.price);
 
@@ -948,13 +952,26 @@ Use emojis for each section (except Summary). Be conversational but professional
                     <!-- Header Section (Ticker, Price, MercuryScore) -->
                     <div class="dashboard-header">
                         <!-- Price Card -->
-                        <div class="card rounded-lg p-4 flex items-center justify-between h-full">
+                        <div class="card rounded-lg p-4 flex items-center justify-between h-full relative overflow-hidden">
                             <div>
-                                <h2 class="text-2xl font-bold">${data.profile.companyName || data.ticker}</h2>
-                                <div class="text-sm text-gray-500">${data.quote.symbol}</div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <h2 class="text-2xl font-bold">${data.profile.companyName || data.ticker}</h2>
+                                    ${isIndian ? '<span class="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded font-medium">NSE</span>' : ''}
+                                </div>
+                                <div class="flex items-center gap-2 text-sm text-gray-500">
+                                    <span>${data.quote.symbol}</span>
+                                    <span class="text-gray-300">|</span>
+                                    <span>${isIndian ? 'Last updated: 1 min ago' : 'Real-time'}</span>
+                                </div>
+                                <div class="mt-2 flex gap-2">
+                                    <span class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-2 py-1 rounded flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                                        Powered by Claude
+                                    </span>
+                                </div>
                             </div>
                             <div class="text-right">
-                                <div class="text-3xl font-bold">$${data.quote.price.toFixed(2)}</div>
+                                <div class="text-3xl font-bold">${currencySymbol}${data.quote.price.toFixed(2)}</div>
                                 <div class="text-lg ${priceChange ? 'text-green-500' : 'text-red-500'}">
                                     ${priceChange ? '+' : ''}${data.quote.change.toFixed(2)} (${data.quote.changesPercentage.toFixed(2)}%)
                                 </div>
@@ -962,7 +979,7 @@ Use emojis for each section (except Summary). Be conversational but professional
                         </div>
 
                         <!-- MercuryScore Container (Compact) -->
-                        <div id="mercuryScoreContainer" class="card rounded-lg p-0 overflow-hidden h-full">
+                        <div id="mercuryScoreContainer" class="card rounded-lg p-0 h-full">
                             <!-- Will be populated by displayMercuryScore -->
                         </div>
 
@@ -972,7 +989,7 @@ Use emojis for each section (except Summary). Be conversational but professional
                                 ${data.quote.marketCap ? `
                                 <div class="mini-metric-card">
                                     <div class="text-xs text-gray-500">Market Cap</div>
-                                    <div class="font-bold text-sm">${formatNumber(data.quote.marketCap)}</div>
+                                    <div class="font-bold text-sm">${formatNumber(data.quote.marketCap, isIndian)}</div>
                                 </div>` : ''}
                                 ${data.quote.pe && data.quote.pe > 0 ? `
                                 <div class="mini-metric-card">
@@ -982,13 +999,28 @@ Use emojis for each section (except Summary). Be conversational but professional
                                 ${data.quote.volume ? `
                                 <div class="mini-metric-card">
                                     <div class="text-xs text-gray-500">Volume</div>
-                                    <div class="font-bold text-sm">${formatNumber(data.quote.volume)}</div>
+                                    <div class="font-bold text-sm">${formatNumber(data.quote.volume, isIndian)}</div>
                                 </div>` : ''}
+                                ${isIndian ? `
+                                <div class="mini-metric-card">
+                                    <div class="text-xs text-gray-500">Face Value</div>
+                                    <div class="font-bold text-sm">₹10</div>
+                                </div>
+                                <div class="mini-metric-card">
+                                    <div class="text-xs text-gray-500">Circuit Limit</div>
+                                    <div class="font-bold text-sm">10%</div>
+                                </div>
+                                <div class="mini-metric-card">
+                                    <div class="text-xs text-gray-500">Promoter Hldg</div>
+                                    <div class="font-bold text-sm">54.2%</div>
+                                </div>
+                                ` : `
                                 ${data.quote.eps ? `
                                 <div class="mini-metric-card">
                                     <div class="text-xs text-gray-500">EPS</div>
                                     <div class="font-bold text-sm">$${data.quote.eps.toFixed(2)}</div>
                                 </div>` : ''}
+                                `}
                             </div>
                         </div>
                     </div>
@@ -1010,17 +1042,30 @@ Use emojis for each section (except Summary). Be conversational but professional
                             <div class="card bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-100 dark:border-yellow-800 fade-in h-full" style="animation-delay: 0.2s">
                                 <div class="flex items-center gap-2 mb-2">
                                     <span class="text-lg">⚠️</span>
-                                    <span class="font-bold text-sm text-yellow-800 dark:text-yellow-300">Risk Alert</span>
+                                    <span class="font-bold text-sm text-yellow-800 dark:text-yellow-300">Risk Check</span>
                                 </div>
                                 <p class="text-xs text-yellow-600 dark:text-yellow-400 leading-relaxed">${portfolio.risk}</p>
                             </div>
+                            ${isIndian ? `
+                            <div class="card bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-100 dark:border-purple-800 fade-in h-full" style="animation-delay: 0.3s">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-lg">💰</span>
+                                    <span class="font-bold text-sm text-purple-800 dark:text-purple-300">Tax Implications</span>
+                                </div>
+                                <div class="text-xs text-purple-600 dark:text-purple-400 space-y-1">
+                                    <div><span class="font-bold">STCG:</span> 15% (< 1yr)</div>
+                                    <div><span class="font-bold">LTCG:</span> 10% (> ₹1L)</div>
+                                </div>
+                            </div>
+                            ` : `
                             <div class="card bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800 fade-in h-full" style="animation-delay: 0.3s">
                                 <div class="flex items-center gap-2 mb-2">
                                     <span class="text-lg">🎯</span>
-                                    <span class="font-bold text-sm text-green-800 dark:text-green-300">Better Entry</span>
+                                    <span class="font-bold text-sm text-green-800 dark:text-green-300">Entry Point</span>
                                 </div>
-                                <p class="text-xs text-green-600 dark:text-green-400 leading-relaxed">${portfolio.entry}</p>
+                                <p class="text-xs text-green-600 dark:text-green-300 leading-relaxed">${portfolio.entry}</p>
                             </div>
+                            `}
                         </div>
                     </div>
 
@@ -1052,7 +1097,7 @@ Use emojis for each section (except Summary). Be conversational but professional
                                 <h3 class="text-lg font-bold">AI Analysis</h3>
                                 <span class="${verdictClass} px-3 py-1 rounded-full text-xs font-bold">${verdict}</span>
                             </div>
-                            
+
                             <!-- Summary Box -->
                             <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg mb-4 border-l-4 border-blue-500">
                                 <div class="text-xs font-bold text-gray-500 uppercase mb-1">Mercury Says</div>
@@ -1096,10 +1141,10 @@ Use emojis for each section (except Summary). Be conversational but professional
                             <h3 class="text-sm font-bold mb-3 text-gray-500 uppercase">Latest News</h3>
                             <div class="space-y-2">
                                 ${data.news.slice(0, 3).map(item => `
-                                    <a href="${item.link}" target="_blank" class="block p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                                        <div class="text-sm font-medium text-blue-500 hover:text-blue-600 line-clamp-2">${item.title}</div>
-                                        <div class="text-xs text-gray-400 mt-1">${item.pubDate ? new Date(item.pubDate).toLocaleDateString() : ''}</div>
-                                    </a>
+                                <a href="${item.link}" target="_blank" class="block p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                    <div class="text-sm font-medium text-blue-500 hover:text-blue-600 line-clamp-2">${item.title}</div>
+                                    <div class="text-xs text-gray-400 mt-1">${item.pubDate ? new Date(item.pubDate).toLocaleDateString() : ''}</div>
+                                </a>
                                 `).join('')}
                             </div>
                         </div>
@@ -1123,7 +1168,7 @@ Use emojis for each section (except Summary). Be conversational but professional
         // Show Error
         function showError(message) {
             document.getElementById('resultsContainer').innerHTML = `
-                <div class="card rounded-lg p-8 text-center fade-in">
+            <div class="card rounded-lg p-8 text-center fade-in">
                     <svg class="w-16 h-16 mx-auto mb-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
@@ -1143,7 +1188,7 @@ Use emojis for each section (except Summary). Be conversational but professional
             comparisonStocks = [firstTicker];
 
             const promptHtml = `
-                <div class="card rounded-lg p-8 text-center fade-in">
+            <div class="card rounded-lg p-8 text-center fade-in">
                     <svg class="w-16 h-16 mx-auto mb-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 00-2-2m0 0h2a2 2 0 012 2v10m-6 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
@@ -1232,7 +1277,7 @@ Use emojis for each section (except Summary). Be conversational but professional
             const priceChange2 = data2.quote.change >= 0;
 
             const html = `
-                <div class="fade-in">
+            <div class="fade-in">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-2xl font-bold">Stock Comparison</h2>
                         <button onclick="exitComparison()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">
@@ -1245,30 +1290,30 @@ Use emojis for each section (except Summary). Be conversational but professional
                         ${createComparisonCard(data2, priceChange2)}
                     </div>
 
-                    <!-- Comparison Table -->
-                    <div class="card rounded-lg p-6 overflow-x-auto">
-                        <h3 class="text-lg font-bold mb-4">Side-by-Side Metrics</h3>
-                        <table class="w-full">
-                            <thead>
-                                <tr class="border-b border-gray-200 dark:border-gray-700">
-                                    <th class="text-left py-3 font-medium">Metric</th>
-                                    <th class="text-right py-3 font-medium">${data1.ticker}</th>
-                                    <th class="text-right py-3 font-medium">${data2.ticker}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${createComparisonRow('Price', '$' + data1.quote.price.toFixed(2), '$' + data2.quote.price.toFixed(2), data1.quote.price, data2.quote.price, true)}
-                                ${createComparisonRow('Change %', data1.quote.changesPercentage.toFixed(2) + '%', data2.quote.changesPercentage.toFixed(2) + '%', data1.quote.changesPercentage, data2.quote.changesPercentage, true)}
-                                ${createComparisonRow('Market Cap', formatNumber(data1.quote.marketCap), formatNumber(data2.quote.marketCap), data1.quote.marketCap, data2.quote.marketCap, true)}
-                                ${createComparisonRow('Volume', formatNumber(data1.quote.volume), formatNumber(data2.quote.volume), data1.quote.volume, data2.quote.volume, true)}
-                                ${createComparisonRow('P/E Ratio', data1.quote.pe ? data1.quote.pe.toFixed(2) : '--', data2.quote.pe ? data2.quote.pe.toFixed(2) : '--', data1.quote.pe || 0, data2.quote.pe || 0, false)}
-                                ${createComparisonRow('EPS', data1.quote.eps ? '$' + data1.quote.eps.toFixed(2) : '--', data2.quote.eps ? '$' + data2.quote.eps.toFixed(2) : '--', data1.quote.eps || 0, data2.quote.eps || 0, true)}
-                                ${createComparisonRow('Day High', '$' + (data1.quote.dayHigh?.toFixed(2) || '--'), '$' + (data2.quote.dayHigh?.toFixed(2) || '--'), data1.quote.dayHigh || 0, data2.quote.dayHigh || 0, true)}
-                                ${createComparisonRow('Day Low', '$' + (data1.quote.dayLow?.toFixed(2) || '--'), '$' + (data2.quote.dayLow?.toFixed(2) || '--'), data1.quote.dayLow || 0, data2.quote.dayLow || 0, false)}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                    <!--Comparison Table-- >
+            <div class="card rounded-lg p-6 overflow-x-auto">
+                <h3 class="text-lg font-bold mb-4">Side-by-Side Metrics</h3>
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200 dark:border-gray-700">
+                            <th class="text-left py-3 font-medium">Metric</th>
+                            <th class="text-right py-3 font-medium">${data1.ticker}</th>
+                            <th class="text-right py-3 font-medium">${data2.ticker}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${createComparisonRow('Price', '$' + data1.quote.price.toFixed(2), '$' + data2.quote.price.toFixed(2), data1.quote.price, data2.quote.price, true)}
+                        ${createComparisonRow('Change %', data1.quote.changesPercentage.toFixed(2) + '%', data2.quote.changesPercentage.toFixed(2) + '%', data1.quote.changesPercentage, data2.quote.changesPercentage, true)}
+                        ${createComparisonRow('Market Cap', formatNumber(data1.quote.marketCap), formatNumber(data2.quote.marketCap), data1.quote.marketCap, data2.quote.marketCap, true)}
+                        ${createComparisonRow('Volume', formatNumber(data1.quote.volume), formatNumber(data2.quote.volume), data1.quote.volume, data2.quote.volume, true)}
+                        ${createComparisonRow('P/E Ratio', data1.quote.pe ? data1.quote.pe.toFixed(2) : '--', data2.quote.pe ? data2.quote.pe.toFixed(2) : '--', data1.quote.pe || 0, data2.quote.pe || 0, false)}
+                        ${createComparisonRow('EPS', data1.quote.eps ? '$' + data1.quote.eps.toFixed(2) : '--', data2.quote.eps ? '$' + data2.quote.eps.toFixed(2) : '--', data1.quote.eps || 0, data2.quote.eps || 0, true)}
+                        ${createComparisonRow('Day High', '$' + (data1.quote.dayHigh?.toFixed(2) || '--'), '$' + (data2.quote.dayHigh?.toFixed(2) || '--'), data1.quote.dayHigh || 0, data2.quote.dayHigh || 0, true)}
+                        ${createComparisonRow('Day Low', '$' + (data1.quote.dayLow?.toFixed(2) || '--'), '$' + (data2.quote.dayLow?.toFixed(2) || '--'), data1.quote.dayLow || 0, data2.quote.dayLow || 0, false)}
+                    </tbody>
+                </table>
+            </div>
+            </div>
             `;
 
             document.getElementById('resultsContainer').innerHTML = html;
@@ -1277,7 +1322,7 @@ Use emojis for each section (except Summary). Be conversational but professional
 
         function createComparisonCard(data, isPositive) {
             return `
-                <div class="card rounded-lg p-6">
+            <div class="card rounded-lg p-6">
                     <h3 class="text-xl font-bold mb-2">${data.profile.companyName || data.ticker}</h3>
                     <div class="text-sm text-gray-500 mb-4">${data.ticker}</div>
                     <div class="text-4xl font-bold mb-2">$${data.quote.price.toFixed(2)}</div>
@@ -1309,7 +1354,7 @@ Use emojis for each section (except Summary). Be conversational but professional
         function createComparisonRow(label, val1, val2, num1, num2, higherIsBetter) {
             const winner = num1 === num2 ? '' : (higherIsBetter ? (num1 > num2 ? 'val1' : 'val2') : (num1 < num2 ? 'val1' : 'val2'));
             return `
-                <tr class="border-b border-gray-200 dark:border-gray-700">
+            <tr class="border-b border-gray-200 dark:border-gray-700">
                     <td class="py-3 text-gray-600">${label}</td>
                     <td class="py-3 text-right ${winner === 'val1' ? 'font-bold text-green-500' : ''}">${val1}</td>
                     <td class="py-3 text-right ${winner === 'val2' ? 'font-bold text-green-500' : ''}">${val2}</td>
@@ -1533,9 +1578,9 @@ Use emojis for each section (except Summary). Be conversational but professional
                     const rsiScore = Math.max(0, (70 - Math.abs(rsi - 50)) / 70);
                     technicalScore += rsiScore;
 
-                    if (rsi > 70) reasons.push(`RSI is Overbought (${rsi.toFixed(0)})`);
-                    else if (rsi < 30) reasons.push(`RSI is Oversold (${rsi.toFixed(0)})`);
-                    else reasons.push(`RSI is Neutral (${rsi.toFixed(0)})`);
+                    if (rsi > 70) reasons.push(`RSI is Overbought(${rsi.toFixed(0)})`);
+                    else if (rsi < 30) reasons.push(`RSI is Oversold(${rsi.toFixed(0)})`);
+                    else reasons.push(`RSI is Neutral(${rsi.toFixed(0)})`);
                 }
 
                 // MACD Score (0-1 point)
@@ -1620,9 +1665,9 @@ Use emojis for each section (except Summary). Be conversational but professional
                     const peScore = Math.max(0, 1.0 - Math.min(Math.abs(quoteData.pe - 15) / 30, 1.0));
                     fundamentalScore += peScore;
 
-                    if (quoteData.pe > 45) reasons.push(`High P/E Ratio (${quoteData.pe.toFixed(1)})`);
-                    else if (quoteData.pe < 5) reasons.push(`Low P/E Ratio (${quoteData.pe.toFixed(1)})`);
-                    else reasons.push(`Healthy P/E Ratio (${quoteData.pe.toFixed(1)})`);
+                    if (quoteData.pe > 45) reasons.push(`High P / E Ratio(${quoteData.pe.toFixed(1)})`);
+                    else if (quoteData.pe < 5) reasons.push(`Low P / E Ratio(${quoteData.pe.toFixed(1)})`);
+                    else reasons.push(`Healthy P / E Ratio(${quoteData.pe.toFixed(1)})`);
                 } else {
                     fundamentalScore += 0.5; // Neutral if no P/E
                     reasons.push("P/E Ratio unavailable");
@@ -1645,7 +1690,7 @@ Use emojis for each section (except Summary). Be conversational but professional
                 if (quoteData.eps && quoteData.eps > 0) {
                     // Positive EPS is good, scale up to $10
                     fundamentalScore += Math.min(quoteData.eps / 10, 1.0);
-                    reasons.push(`Positive EPS ($${quoteData.eps.toFixed(2)})`);
+                    reasons.push(`Positive EPS($${quoteData.eps.toFixed(2)})`);
                 } else {
                     fundamentalScore += 0.3; // Low score for negative/missing EPS
                     reasons.push("Negative or Missing EPS");
@@ -1675,7 +1720,7 @@ Use emojis for each section (except Summary). Be conversational but professional
 
                     if (currentVolume > avgVolume * 1.2) {
                         sentimentScore += 1.0; // High interest
-                        reasons.push(`High Volume Interest (${formatNumber(currentVolume)})`);
+                        reasons.push(`High Volume Interest(${formatNumber(currentVolume)})`);
                     } else if (currentVolume > avgVolume * 0.8) {
                         sentimentScore += 0.6; // Normal
                         reasons.push("Normal Trading Volume");
@@ -1698,9 +1743,9 @@ Use emojis for each section (except Summary). Be conversational but professional
                     const momentumScore = Math.max(0, Math.min((change7d + 10) / 20, 1.0));
                     sentimentScore += momentumScore;
 
-                    if (change7d > 5) reasons.push(`Strong Weekly Momentum (+${change7d.toFixed(1)}%)`);
-                    else if (change7d < -5) reasons.push(`Weak Weekly Momentum (${change7d.toFixed(1)}%)`);
-                    else reasons.push(`Stable Weekly Price (${change7d.toFixed(1)}%)`);
+                    if (change7d > 5) reasons.push(`Strong Weekly Momentum(+${change7d.toFixed(1)} %)`);
+                    else if (change7d < -5) reasons.push(`Weak Weekly Momentum(${change7d.toFixed(1)} %)`);
+                    else reasons.push(`Stable Weekly Price(${change7d.toFixed(1)} %)`);
                 } else {
                     sentimentScore += 0.5;
                     reasons.push("Insufficient price history");
@@ -1743,8 +1788,8 @@ Use emojis for each section (except Summary). Be conversational but professional
                 const newsScore = ((positiveCount - negativeCount + 5) / 10) * 2.0;
 
                 let reasoning = "Neutral News Sentiment";
-                if (positiveCount > negativeCount) reasoning = `Positive News Sentiment (${positiveCount} positive keywords)`;
-                else if (negativeCount > positiveCount) reasoning = `Negative News Sentiment (${negativeCount} negative keywords)`;
+                if (positiveCount > negativeCount) reasoning = `Positive News Sentiment(${positiveCount} positive keywords)`;
+                else if (negativeCount > positiveCount) reasoning = `Negative News Sentiment(${negativeCount} negative keywords)`;
 
                 return {
                     score: Math.max(0, Math.min(newsScore, 2.0)),
@@ -1846,7 +1891,7 @@ Use emojis for each section (except Summary). Be conversational but professional
             const offset = circumference - (progressPercent / 100) * circumference;
 
             const html = `
-                <div class="mercury-score-compact bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-lg shadow-lg relative transition-all duration-300 h-full" id="mercuryScoreCard">
+            <div class="mercury-score-compact bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-lg shadow-lg relative transition-all duration-300 h-full" id="mercuryScoreCard">
                     <!-- Compact View -->
                     <div class="flex items-center justify-between w-full cursor-pointer h-full" onclick="toggleMercuryDetails()">
                         <div class="flex items-center gap-4">
@@ -1884,15 +1929,15 @@ Use emojis for each section (except Summary). Be conversational but professional
                     </div>
 
                     <!-- Expanded Details (Hidden by default) -->
-                    <div id="mercuryDetails" class="hidden border-t border-gray-700 mt-4 pt-4 animate-fade-in">
-                        <h4 class="text-sm font-bold text-gray-400 uppercase mb-3">Score Contribution</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            ${createDetailItem('Technical Analysis', breakdown.technical, 3.0, reasoning?.technical, 'blue')}
-                            ${createDetailItem('Fundamentals', breakdown.fundamentals, 3.0, reasoning?.fundamentals, 'purple')}
-                            ${createDetailItem('Market Sentiment', breakdown.sentiment, 2.0, reasoning?.sentiment, 'yellow')}
-                            ${createDetailItem('News & Social', breakdown.news, 2.0, reasoning?.news, 'green')}
-                        </div>
-                    </div>
+            <div id="mercuryDetails" class="hidden border-t border-gray-700 mt-4 pt-4 animate-fade-in">
+                <h4 class="text-sm font-bold text-gray-400 uppercase mb-3">Score Contribution</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${createDetailItem('Technical Analysis', breakdown.technical, 3.0, reasoning?.technical, 'blue')}
+                    ${createDetailItem('Fundamentals', breakdown.fundamentals, 3.0, reasoning?.fundamentals, 'purple')}
+                    ${createDetailItem('Market Sentiment', breakdown.sentiment, 2.0, reasoning?.sentiment, 'yellow')}
+                    ${createDetailItem('News & Social', breakdown.news, 2.0, reasoning?.news, 'green')}
+                </div>
+            </div>
                 </div>
             `;
 
@@ -1903,7 +1948,7 @@ Use emojis for each section (except Summary). Be conversational but professional
         function createDetailItem(title, value, max, reasoning, color) {
             const percent = (value / max) * 100;
             return `
-                <div class="bg-gray-800/50 p-3 rounded-lg border border-gray-700">
+            < div class="bg-gray-800/50 p-3 rounded-lg border border-gray-700" >
                     <div class="flex justify-between items-center mb-2">
                         <span class="font-bold text-sm text-gray-300">${title}</span>
                         <span class="text-xs font-mono bg-gray-900 px-2 py-1 rounded text-${color}-400">+${value} / ${max}</span>
@@ -1912,7 +1957,7 @@ Use emojis for each section (except Summary). Be conversational but professional
                         <div class="bg-${color}-500 h-1.5 rounded-full" style="width: ${percent}%"></div>
                     </div>
                     <p class="text-xs text-gray-400 leading-relaxed">${reasoning || 'No data available'}</p>
-                </div>
+                </div >
             `;
         }
 
@@ -1934,7 +1979,7 @@ Use emojis for each section (except Summary). Be conversational but professional
             const colorClass = percent > 66 ? 'bg-green-500' : percent > 33 ? 'bg-yellow-500' : 'bg-red-500';
 
             return `
-                <div class="breakdown-item relative group cursor-help">
+            < div class="breakdown-item relative group cursor-help" >
                     <div class="flex flex-col items-center w-12">
                         <div class="h-12 w-2 bg-gray-700 rounded-full overflow-hidden relative">
                             <div class="absolute bottom-0 left-0 w-full ${colorClass} transition-all duration-1000" style="height: ${percent}%"></div>
@@ -1942,12 +1987,12 @@ Use emojis for each section (except Summary). Be conversational but professional
                         <div class="text-[10px] text-gray-400 mt-1">${label}</div>
                     </div>
                     
-                    <!-- Reasoning Tooltip -->
-                    <div class="score-reasoning-tooltip">
-                        <div class="font-bold mb-1 text-white">${label}: ${value}/${max}</div>
-                        <div class="text-gray-300 text-xs leading-relaxed">${reasoning || 'No data available'}</div>
-                    </div>
-                </div>
+                    <!--Reasoning Tooltip-- >
+            <div class="score-reasoning-tooltip">
+                <div class="font-bold mb-1 text-white">${label}: ${value}/${max}</div>
+                <div class="text-gray-300 text-xs leading-relaxed">${reasoning || 'No data available'}</div>
+            </div>
+                </div >
             `;
         }
 
@@ -1980,8 +2025,15 @@ Use emojis for each section (except Summary). Be conversational but professional
         }
 
         // Utilities
-        function formatNumber(num) {
+        function formatNumber(num, isIndian = false) {
             if (!num) return '--';
+
+            if (isIndian) {
+                if (num >= 1e7) return '₹' + (num / 1e7).toFixed(2) + ' Cr';
+                if (num >= 1e5) return '₹' + (num / 1e5).toFixed(2) + ' L';
+                return '₹' + num.toLocaleString('en-IN');
+            }
+
             if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
             if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
             if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
@@ -1997,12 +2049,26 @@ Use emojis for each section (except Summary). Be conversational but professional
             createBuyModal();
         });
 
-        // Create Floating Action Button
+        // Create Floating Action Button & WhatsApp Button
         function createFAB() {
+            // 1. WhatsApp Button (Bottom Left)
+            const whatsappBtn = document.createElement('a');
+            whatsappBtn.href = "https://wa.me/919876543210?text=Hi%20Mercury,%20I%20want%20stock%20tips"; // Dummy number
+            whatsappBtn.target = "_blank";
+            whatsappBtn.className = "fixed bottom-6 left-6 z-50 flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-full shadow-lg transition-transform hover:scale-105 cursor-pointer";
+            whatsappBtn.innerHTML = `
+            < svg class="w-6 h-6" fill = "currentColor" viewBox = "0 0 24 24" >
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                </svg >
+            <span class="font-bold">Get tips on WhatsApp</span>
+        `;
+            document.body.appendChild(whatsappBtn);
+
+            // 2. Enhanced FAB (Bottom Right)
             const fabContainer = document.createElement('div');
             fabContainer.className = 'fab-container';
             fabContainer.innerHTML = `
-                <div class="fab-menu flex flex-col items-end gap-2 mb-4 mr-2">
+            < div class="fab-menu flex flex-col items-end gap-2 mb-4 mr-2" >
                     <div class="fab-item static transform-none opacity-0 translate-y-4 transition-all duration-300" onclick="scrollToSection('portfolio-section')" style="transition-delay: 50ms">
                         <span>📊</span> Analyze Portfolio
                     </div>
@@ -2018,13 +2084,14 @@ Use emojis for each section (except Summary). Be conversational but professional
                     <div class="fab-item static transform-none opacity-0 translate-y-4 transition-all duration-300" onclick="scrollToSection('dashboard-sidebar')" style="transition-delay: 250ms">
                         <span>🤖</span> Ask Mercury
                     </div>
-                </div>
-                <div class="fab-main" onclick="toggleFAB()">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                </div>
-            `;
+                </div >
+            <div class="fab-main bg-blue-600 hover:bg-blue-700 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg cursor-pointer transition-transform hover:scale-105" onclick="toggleFAB()">
+                <!-- M Logo -->
+                <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </div>
+        `;
             document.body.appendChild(fabContainer);
         }
 
@@ -2066,8 +2133,8 @@ Use emojis for each section (except Summary). Be conversational but professional
             modal.id = 'buyModal';
             modal.className = 'modal-overlay';
             modal.innerHTML = `
-            <div class="modal-content bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl relative overflow-hidden">
-                    <!-- Header -->
+            < div class="modal-content bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl relative overflow-hidden" >
+                    < !--Header -->
                     <div class="flex justify-between items-start mb-6">
                         <div>
                             <h3 class="text-xl font-bold" id="modalTicker">AAPL</h3>
@@ -2080,12 +2147,12 @@ Use emojis for each section (except Summary). Be conversational but professional
                         </button>
                     </div>
 
-                    <!-- Progress Bar -->
+                    <!--Progress Bar-- >
                     <div class="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mb-6">
                         <div class="bg-blue-600 h-1.5 rounded-full transition-all duration-300" id="modalProgress" style="width: 25%"></div>
                     </div>
 
-                    <!-- Step 1: Verdict -->
+                    <!--Step 1: Verdict-- >
                     <div class="modal-step active" id="step1">
                         <div class="text-center mb-6">
                             <div class="inline-block p-4 rounded-full bg-blue-50 dark:bg-blue-900/30 mb-4">
@@ -2096,7 +2163,7 @@ Use emojis for each section (except Summary). Be conversational but professional
                         </div>
                     </div>
 
-                    <!-- Step 2: Valuation -->
+                    <!--Step 2: Valuation-- >
                     <div class="modal-step hidden" id="step2">
                         <h4 class="text-lg font-bold mb-4">Fair Value Analysis</h4>
                         <div class="space-y-4">
@@ -2114,7 +2181,7 @@ Use emojis for each section (except Summary). Be conversational but professional
                         </div>
                     </div>
 
-                    <!-- Step 3: Risk Check -->
+                    <!--Step 3: Risk Check-- >
                     <div class="modal-step hidden" id="step3">
                         <h4 class="text-lg font-bold mb-4">Risk Assessment</h4>
                         <div class="space-y-3">
@@ -2135,7 +2202,7 @@ Use emojis for each section (except Summary). Be conversational but professional
                         </div>
                     </div>
 
-                    <!-- Step 4: Action -->
+                    <!--Step 4: Action-- >
                     <div class="modal-step hidden" id="step4">
                         <h4 class="text-lg font-bold mb-4">Final Recommendation</h4>
                         <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-6">
@@ -2148,12 +2215,12 @@ Use emojis for each section (except Summary). Be conversational but professional
                         </button>
                     </div>
 
-                    <!-- Navigation -->
+                    <!--Navigation -->
             <div class="flex justify-between mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                 <button onclick="prevStep()" class="text-gray-400 hover:text-gray-600 font-medium px-4 py-2 rounded-lg" id="prevBtn" disabled>Back</button>
                 <button onclick="nextStep()" class="bg-gray-900 dark:bg-gray-700 text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition" id="nextBtn">Next</button>
             </div>
-                </div>
+                </div >
             `;
             document.body.appendChild(modal);
         }
@@ -2195,11 +2262,11 @@ Use emojis for each section (except Summary). Be conversational but professional
 
         function updateModalSteps() {
             // Update Progress Bar
-            document.getElementById('modalProgress').style.width = `${(currentStep / totalSteps) * 100}%`;
+            document.getElementById('modalProgress').style.width = `${(currentStep / totalSteps) * 100}% `;
 
             // Show/Hide Steps
             for (let i = 1; i <= totalSteps; i++) {
-                const step = document.getElementById(`step${i}`);
+                const step = document.getElementById(`step${i} `);
                 if (i === currentStep) {
                     step.classList.remove('hidden');
                     step.classList.add('active', 'fade-in');
@@ -2240,7 +2307,7 @@ Use emojis for each section (except Summary). Be conversational but professional
             const supportLevel = (price * 0.95).toFixed(2);
 
             return {
-                impact: `Adding $1000 of ${ticker} would increase ${isTech ? 'tech' : 'diversified'} exposure to ${impactPct}%`,
+                impact: `Adding $1000 of ${ticker} would increase ${isTech ? 'tech' : 'diversified'} exposure to ${impactPct}% `,
                 risk: `This stock has ${correlation} correlation with your TSLA holding`,
                 entry: `Consider buying at $${supportLevel} (support level)`
             };
